@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfIQ v7</title>
+  <title>GolfIQ v8</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -42,6 +42,15 @@ h1,h2,h3,p{margin-top:0}.topbar h1{margin:2px 0 0;font-size:30px}.hero h2{font-s
 .pregame-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
 .pregame-stat{border:1px solid var(--line);background:#13211b;border-radius:14px;padding:9px 8px;text-align:center}
 .pregame-stat strong{display:block;font-size:18px;line-height:1.1}.pregame-stat span{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:3px}
+.hole-stats{margin-top:10px;border-top:1px solid var(--line)}
+.hole-stat-row{display:grid;grid-template-columns:52px repeat(4,minmax(0,1fr));gap:5px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:11px}
+.hole-stat-row:last-child{border-bottom:0}
+.hole-stat-row .row-label{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+.hole-stat{text-align:center;min-width:0}
+.hole-stat strong{display:block;font-size:12px;line-height:1.05}
+.hole-stat span{display:block;color:var(--muted);font-size:9px;line-height:1.1;margin-top:2px}
+.hole-insight{margin-top:8px;font-size:11px;color:#dce6e1;line-height:1.3}
+
 .stat-tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px}.stat-tab{white-space:nowrap;border:1px solid var(--line);background:#13211b;color:#dbe5e0;border-radius:999px;padding:8px 12px;font-weight:800;font-size:13px}.stat-tab.active{background:var(--accent);color:#14200f;border-color:var(--accent)}
 .chart-card{padding:16px 14px 12px}.chart-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}.chart-head strong{font-size:18px}.chart-head .muted{font-size:12px}.round-chart-wrap{overflow-x:auto;padding:6px 2px 2px;scroll-behavior:smooth}.round-chart{height:240px;min-width:max(100%,calc(var(--bars,12) * 44px));display:flex;align-items:stretch;gap:6px;border-bottom:1px solid var(--line);padding:0 4px}.bar-col{width:38px;flex:0 0 38px;display:grid;grid-template-rows:1fr 52px;gap:4px;align-items:end}.bar-track{height:100%;display:flex;align-items:flex-end;justify-content:center;position:relative}.bar{width:28px;min-height:4px;border-radius:9px 9px 3px 3px;background:linear-gradient(180deg,var(--accent),var(--accent2));box-shadow:0 0 0 1px rgba(255,255,255,.03) inset}.bar-value{position:absolute;left:50%;transform:translateX(-50%);font-size:11px;font-weight:900;color:#e8efe9;white-space:nowrap}.bar-label{text-align:center;font-size:10px;color:var(--muted);line-height:1.15}.bar-label strong{display:block;color:#dbe5e0;font-size:10px;white-space:nowrap}.chart-summary{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.chart-summary .badge{min-width:auto}
 .bottom-nav{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);width:min(720px,calc(100% - 24px));display:grid;grid-template-columns:repeat(4,1fr);background:rgba(18,27,24,.95);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:20px;padding:7px;box-shadow:var(--shadow)}.nav-item{border:0;background:transparent;color:var(--muted);padding:8px 4px;border-radius:14px}.nav-item span{display:block;font-size:18px}.nav-item small{font-size:11px}.nav-item.active{background:#24342e;color:var(--text)}
@@ -93,7 +102,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div>
         <div class="eyebrow">AI GOLF CADDIE</div>
-        <h1>GolfIQ <span style="font-size:.45em;color:var(--muted);font-weight:800;vertical-align:middle">v7</span></h1>
+        <h1>GolfIQ <span style="font-size:.45em;color:var(--muted);font-weight:800;vertical-align:middle">v8</span></h1>
       </div>
       <button id="importBtn" class="button secondary">Import Round</button>
     </header>
@@ -168,7 +177,7 @@ function holeMemory(courseId){
     let risk='low'; if(avgScore-par>=1.3 || doubleRate>=40) risk='high'; else if(avgScore-par>=.7 || doubleRate>=20) risk='medium';
     const fwVals=vals.map(v=>v.fw).filter(v=>v!=null), girVals=vals.map(v=>v.gir).filter(v=>v!=null);
     const strategy=risk==='high'?'Respect this hole. Favor the safe side and remove the big number.':risk==='medium'?'Play to your normal target. Avoid forcing a recovery shot.':'Green-light hole. Stick with the plan that has worked.';
-    return {hole:c.holeNumbers?.[i]??i+1,par,played:scores.length,avgScore,best:Math.min(...scores),worst:Math.max(...scores),recent:scores,fw:pct(fwVals),gir:pct(girVals),putts:avg(vals.map(v=>v.putts).filter(v=>v!=null)),doubleRate,risk,strategy};
+    return {hole:c.holeNumbers?.[i]??i+1,par,played:scores.length,avgScore,stdev:stddev(scores),best:Math.min(...scores),worst:Math.max(...scores),recent:scores,fw:pct(fwVals),gir:pct(girVals),putts:avg(vals.map(v=>v.putts).filter(v=>v!=null)),doubleRate,risk,strategy};
   }).filter(Boolean);
 }
 
@@ -203,8 +212,31 @@ function riskLetter(h){return h.risk==='high'?'H':h.risk==='medium'?'M':'L'}
 function scoreClass(score,par){const d=score-par; return d<=-2?'eagle':d===-1?'birdie':d===1?'bogey':d===2?'double':d>=3?'worse':''}
 
 
+
+function courseMenuLabel(c){
+  const dupes=db.courses.filter(x=>x.name===c.name);
+  return dupes.length>1 ? `${c.name} · ${c.tees}` : c.name;
+}
+function holeLastRound(courseId,holeNumber){
+  const c=course(courseId), r=roundsFor(courseId)[0];
+  if(!r)return null;
+  const nums=c.holeNumbers||c.pars.map((_,j)=>j+1);
+  const i=nums.indexOf(holeNumber);
+  if(i<0)return null;
+  return {score:r.scores?.[i]??null,fw:r.fairways?.[i]??null,gir:r.gir?.[i]??null,putts:r.putts?.[i]??null};
+}
+function usefulHoleInsight(h){
+  const bits=[];
+  if(h.doubleRate>=40) bits.push(`${h.doubleRate}% double+`);
+  if(h.gir!=null && h.gir<=25) bits.push(`GIR ${h.gir}%`);
+  if(h.fw!=null && h.fw<=30 && h.par!==3) bits.push(`FH ${h.fw}%`);
+  if(h.putts!=null && h.putts>=2.3) bits.push(`${h.putts.toFixed(1)} putts avg`);
+  if(h.avgScore-h.par>=1.2 && !bits.length) bits.push(`+${(h.avgScore-h.par).toFixed(1)} vs par`);
+  return bits.join(' · ');
+}
+
 function sortedCourses(){
-  return db.courses.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  return db.courses.slice().sort((a,b)=>a.name.localeCompare(b.name)||a.tees.localeCompare(b.tees));
 }
 function parTypeSummary(courseId,limit=3){
   const c=course(courseId);
@@ -263,7 +295,7 @@ function pregame(){
   const latest=rounds[0], keys=deepPregameInsights(c.id);
   return `
     <div class="section-head" style="margin-top:0"><div><div class="eyebrow">NEXT ROUND</div><h2>Choose course</h2></div></div>
-    <div class="course-select">${sortedCourses().map(x=>`<button class="course-pill ${x.id===c.id?'active':''}" data-course="${x.id}">${x.name}</button>`).join('')}</div>
+    <div class="course-select">${sortedCourses().map(x=>`<button class="course-pill ${x.id===c.id?'active':''}" data-course="${x.id}">${courseMenuLabel(x)}</button>`).join('')}</div>
 
     <section class="hero" style="margin-top:14px">
       <div class="hero-copy"><div class="eyebrow">TOMORROW'S PREGAME</div><h2>${c.name}</h2>
@@ -290,12 +322,42 @@ function pregame(){
   `;
 }
 
-function renderHoleCard(h){return `<div class="hole-card risk-${h.risk}"><div class="hole-top"><div><span class="hole-number">${h.hole}</span> <span class="muted">Par ${h.par}</span></div><span class="risk-dot" title="${riskLabel(h)}">${riskLetter(h)}</span></div><div class="hole-score">Avg ${h.avgScore.toFixed(1)}</div><div class="history">Scores: ${h.recent.join(', ')} · GIR ${h.gir??'—'}%</div><div class="strategy">${h.strategy}</div></div>`}
+function renderHoleCard(h){
+  const last=holeLastRound(state.selectedCourseId,h.hole);
+  const insight=usefulHoleInsight(h);
+  const fwAll=h.par===3?'—':(h.fw==null?'—':`${h.fw}%`);
+  const fwLast=h.par===3?'—':(last?.fw==null?'—':last.fw?'Yes':'No');
+  const girLast=last?.gir==null?'—':last.gir?'Yes':'No';
+  return `<div class="hole-card risk-${h.risk}">
+    <div class="hole-top">
+      <div><span class="hole-number">${h.hole}</span> <span class="muted">Par ${h.par}</span></div>
+      <span class="risk-dot" title="${riskLabel(h)}">${riskLetter(h)}</span>
+    </div>
+    <div class="hole-stats">
+      <div class="hole-stat-row">
+        <div class="row-label">Last</div>
+        <div class="hole-stat"><strong>${last?.score??'—'}</strong><span>Score</span></div>
+        <div class="hole-stat"><strong>${fwLast}</strong><span>FH</span></div>
+        <div class="hole-stat"><strong>${girLast}</strong><span>GIR</span></div>
+        <div class="hole-stat"><strong>${last?.putts??'—'}</strong><span>Putts</span></div>
+      </div>
+      <div class="hole-stat-row">
+        <div class="row-label">All</div>
+        <div class="hole-stat"><strong>${h.avgScore.toFixed(1)}</strong><span>Avg</span></div>
+        <div class="hole-stat"><strong>${fwAll}</strong><span>FH</span></div>
+        <div class="hole-stat"><strong>${h.gir==null?'—':`${h.gir}%`}</strong><span>GIR</span></div>
+        <div class="hole-stat"><strong>${h.putts==null?'—':h.putts.toFixed(1)}</strong><span>Putts</span></div>
+      </div>
+    </div>
+    <div class="history">${h.played} round${h.played===1?'':'s'} · Avg ${h.avgScore.toFixed(1)} · SD ${h.stdev==null?'—':h.stdev.toFixed(1)}</div>
+    ${insight?`<div class="hole-insight">${insight}</div>`:''}
+  </div>`
+}
 
 function memory(){
   const c=course(state.selectedCourseId), mem=holeMemory(c.id);
   return `<div class="section-head"><div><div class="eyebrow">HOLE-BY-HOLE MEMORY</div><h2>${c.name}</h2></div></div>
-  <div class="course-select">${sortedCourses().map(x=>`<button class="course-pill ${x.id===c.id?'active':''}" data-course="${x.id}">${x.name}</button>`).join('')}</div>
+  <div class="course-select">${sortedCourses().map(x=>`<button class="course-pill ${x.id===c.id?'active':''}" data-course="${x.id}">${courseMenuLabel(x)}</button>`).join('')}</div>
   <div class="risk-legend"><span class="chip"><span class="risk-dot">L</span> Low risk</span><span class="chip"><span class="risk-dot" style="background:var(--warning);color:#2a2200">M</span> Medium risk</span><span class="chip"><span class="risk-dot" style="background:var(--danger);color:#fff">H</span> High risk</span></div>
   <div class="hole-grid">${mem.map(renderHoleCard).join('')}</div>`;
 }
