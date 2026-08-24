@@ -295,7 +295,7 @@ function renderHoleCard(h){return `<div class="hole-card risk-${h.risk}"><div cl
 function memory(){
   const c=course(state.selectedCourseId), mem=holeMemory(c.id);
   return `<div class="section-head"><div><div class="eyebrow">HOLE-BY-HOLE MEMORY</div><h2>${c.name}</h2></div></div>
-  <div class="course-select">${sortedCourses().map(x=>`<button class="course-pill ${x.id===c.id?'active':''}" data-course="${x.id}">${x.name}</button>`.join('')}</div>
+  <div class="course-select">${sortedCourses().map(x=>`<button class="course-pill ${x.id===c.id?'active':''}" data-course="${x.id}">${x.name}</button>`).join('')}</div>
   <div class="risk-legend"><span class="chip"><span class="risk-dot">L</span> Low risk</span><span class="chip"><span class="risk-dot" style="background:var(--warning);color:#2a2200">M</span> Medium risk</span><span class="chip"><span class="risk-dot" style="background:var(--danger);color:#fff">H</span> High risk</span></div>
   <div class="hole-grid">${mem.map(renderHoleCard).join('')}</div>`;
 }
