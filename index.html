@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfIQ v8</title>
+  <title>GolfIQ v8.1</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -102,7 +102,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div>
         <div class="eyebrow">AI GOLF CADDIE</div>
-        <h1>GolfIQ <span style="font-size:.45em;color:var(--muted);font-weight:800;vertical-align:middle">v8</span></h1>
+        <h1>GolfIQ <span style="font-size:.45em;color:var(--muted);font-weight:800;vertical-align:middle">v8.1</span></h1>
       </div>
       <button id="importBtn" class="button secondary">Import Round</button>
     </header>
@@ -162,6 +162,7 @@ const course = id => db.courses.find(c=>c.id===id);
 const roundsFor = id => db.rounds.filter(r=>r.courseId===id).sort((a,b)=>b.date.localeCompare(a.date));
 const pct = (arr) => { const vals=(arr||[]).filter(v=>v!==null&&v!==undefined); return vals.length ? Math.round(100*vals.reduce((a,b)=>a+b,0)/vals.length) : null; };
 const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+const stddev = arr => { if(!arr || !arr.length) return null; const m=avg(arr); return Math.sqrt(avg(arr.map(x=>(x-m)**2))); };
 const sum = arr => (arr||[]).reduce((a,b)=>a+(Number(b)||0),0);
 const fmtDate = d => new Date(d+'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
 const shortDate = d => new Date(d+'T12:00:00').toLocaleDateString(undefined,{month:'numeric',day:'numeric'});
