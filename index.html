@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfIQ v8.1</title>
+  <title>GolfIQ v8.2</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -43,13 +43,27 @@ h1,h2,h3,p{margin-top:0}.topbar h1{margin:2px 0 0;font-size:30px}.hero h2{font-s
 .pregame-stat{border:1px solid var(--line);background:#13211b;border-radius:14px;padding:9px 8px;text-align:center}
 .pregame-stat strong{display:block;font-size:18px;line-height:1.1}.pregame-stat span{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:3px}
 .hole-stats{margin-top:10px;border-top:1px solid var(--line)}
-.hole-stat-row{display:grid;grid-template-columns:52px repeat(4,minmax(0,1fr));gap:5px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:11px}
+.hole-stat-row{display:grid;grid-template-columns:38px repeat(4,minmax(0,1fr));gap:3px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:11px}
 .hole-stat-row:last-child{border-bottom:0}
 .hole-stat-row .row-label{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em}
 .hole-stat{text-align:center;min-width:0}
 .hole-stat strong{display:block;font-size:12px;line-height:1.05}
 .hole-stat span{display:block;color:var(--muted);font-size:9px;line-height:1.1;margin-top:2px}
 .hole-insight{margin-top:8px;font-size:11px;color:#dce6e1;line-height:1.3}
+.stat-check{color:#23c552;font-weight:950;font-size:15px;line-height:1}
+.stat-x{color:#ff4d4f;font-weight:950;font-size:15px;line-height:1}
+.course-stat-lines{margin-top:14px;border:1px solid var(--line);background:#13211b;border-radius:14px;padding:2px 10px}
+.course-stat-row{display:grid;grid-template-columns:38px repeat(4,minmax(0,1fr));gap:3px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.course-stat-row:last-child{border-bottom:0}
+.course-stat-row .row-label{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+.course-stat{text-align:center;min-width:0}
+.course-stat strong{display:block;font-size:14px;line-height:1.05}
+.course-stat span{display:block;color:var(--muted);font-size:9px;line-height:1.1;margin-top:2px}
+.priority-tag{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:9px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin-top:7px}
+.priority-tag.protect{background:rgba(255,77,79,.14);color:#ff8a8c;border:1px solid rgba(255,77,79,.38)}
+.priority-tag.confidence{background:rgba(35,197,82,.13);color:#6fe18f;border:1px solid rgba(35,197,82,.35)}
+.score-over{font-size:12px;color:var(--muted);font-weight:850;margin-left:5px;white-space:nowrap}
+
 
 .stat-tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px}.stat-tab{white-space:nowrap;border:1px solid var(--line);background:#13211b;color:#dbe5e0;border-radius:999px;padding:8px 12px;font-weight:800;font-size:13px}.stat-tab.active{background:var(--accent);color:#14200f;border-color:var(--accent)}
 .chart-card{padding:16px 14px 12px}.chart-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}.chart-head strong{font-size:18px}.chart-head .muted{font-size:12px}.round-chart-wrap{overflow-x:auto;padding:6px 2px 2px;scroll-behavior:smooth}.round-chart{height:240px;min-width:max(100%,calc(var(--bars,12) * 44px));display:flex;align-items:stretch;gap:6px;border-bottom:1px solid var(--line);padding:0 4px}.bar-col{width:38px;flex:0 0 38px;display:grid;grid-template-rows:1fr 52px;gap:4px;align-items:end}.bar-track{height:100%;display:flex;align-items:flex-end;justify-content:center;position:relative}.bar{width:28px;min-height:4px;border-radius:9px 9px 3px 3px;background:linear-gradient(180deg,var(--accent),var(--accent2));box-shadow:0 0 0 1px rgba(255,255,255,.03) inset}.bar-value{position:absolute;left:50%;transform:translateX(-50%);font-size:11px;font-weight:900;color:#e8efe9;white-space:nowrap}.bar-label{text-align:center;font-size:10px;color:var(--muted);line-height:1.15}.bar-label strong{display:block;color:#dbe5e0;font-size:10px;white-space:nowrap}.chart-summary{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.chart-summary .badge{min-width:auto}
@@ -102,7 +116,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div>
         <div class="eyebrow">AI GOLF CADDIE</div>
-        <h1>GolfIQ <span style="font-size:.45em;color:var(--muted);font-weight:800;vertical-align:middle">v8.1</span></h1>
+        <h1>GolfIQ <span style="font-size:.45em;color:var(--muted);font-weight:800;vertical-align:middle">v8.2</span></h1>
       </div>
       <button id="importBtn" class="button secondary">Import Round</button>
     </header>
@@ -291,9 +305,51 @@ function deepPregameInsights(courseId){
   return keys.slice(0,3);
 }
 
+
+function courseRoundStats(courseId,mode='all'){
+  const c=course(courseId), rs=roundsFor(courseId);
+  const use=mode==='last'?rs.slice(0,1):rs;
+  if(!use.length)return {score:null,fw:null,gir:null,putts:null};
+  const fw=use.flatMap(r=>r.fairways||[]).filter(v=>v!=null);
+  const gir=use.flatMap(r=>r.gir||[]).filter(v=>v!=null);
+  const putts=use.map(r=>sum(r.putts||[])).filter(v=>v>0);
+  return {
+    score:mode==='last'?use[0].gross:avg(use.map(r=>r.gross)),
+    fw:fw.length?pct(fw):null,
+    gir:gir.length?pct(gir):null,
+    putts:putts.length?avg(putts):null
+  };
+}
+function priorityHoles(courseId){
+  const c=course(courseId), mem=holeMemory(courseId);
+  const hcp=c.handicaps||[];
+  const enriched=mem.map((h,i)=>{
+    const holeHcp=hcp[i]??18;
+    const hard=Math.max(0,(10-holeHcp)/9); // strongest weight on handicap 1-9 holes
+    const over=h.avgScore-h.par;
+    const protect=over*1.35+(h.doubleRate||0)/55+(h.gir!=null&&h.gir<30?.35:0);
+    const confidence=hard*1.15+Math.max(0,.75-over)*1.05+(h.gir!=null&&h.gir>=50?.25:0);
+    return {...h,holeHcp,protect,confidence};
+  });
+  const protect=enriched.slice().sort((a,b)=>b.protect-a.protect).slice(0,4)
+    .map(h=>({...h,priorityType:'protect'}));
+  const used=new Set(protect.map(h=>h.hole));
+  const confidence=enriched.filter(h=>!used.has(h.hole)&&h.holeHcp<=9&&h.avgScore-h.par<=.85)
+    .sort((a,b)=>b.confidence-a.confidence).slice(0,2)
+    .map(h=>({...h,priorityType:'confidence'}));
+  const selected=[...protect,...confidence];
+  if(selected.length<6){
+    const used2=new Set(selected.map(h=>h.hole));
+    selected.push(...enriched.filter(h=>!used2.has(h.hole)).sort((a,b)=>b.protect-a.protect).slice(0,6-selected.length).map(h=>({...h,priorityType:'protect'})));
+  }
+  return selected.slice(0,6);
+}
+
 function pregame(){
-  const c=course(state.selectedCourseId), rounds=roundsFor(c.id), mem=holeMemory(c.id), cs=recentCourseSummary(c.id,3);
+  const c=course(state.selectedCourseId), rounds=roundsFor(c.id), priority=priorityHoles(c.id);
   const latest=rounds[0], keys=deepPregameInsights(c.id);
+  const lastStats=courseRoundStats(c.id,'last'), allStats=courseRoundStats(c.id,'all');
+  const pctVal=v=>v==null?'—':`${v}%`, numVal=v=>v==null?'—':v.toFixed(1);
   return `
     <div class="section-head" style="margin-top:0"><div><div class="eyebrow">NEXT ROUND</div><h2>Choose course</h2></div></div>
     <div class="course-select">${sortedCourses().map(x=>`<button class="course-pill ${x.id===c.id?'active':''}" data-course="${x.id}">${courseMenuLabel(x)}</button>`).join('')}</div>
@@ -301,19 +357,30 @@ function pregame(){
     <section class="hero" style="margin-top:14px">
       <div class="hero-copy"><div class="eyebrow">TOMORROW'S PREGAME</div><h2>${c.name}</h2>
       <p class="muted">${c.tees} tees · Par ${c.par} · ${c.rating}/${c.slope} · ${rounds.length} round${rounds.length===1?'':'s'} in memory</p>
-      <div class="pregame-stats">
-        <div class="pregame-stat"><strong>${cs.fw??'—'}%</strong><span>Fairways</span></div>
-        <div class="pregame-stat"><strong>${cs.gir??'—'}%</strong><span>GIR</span></div>
-        <div class="pregame-stat"><strong>${cs.putts!=null?cs.putts.toFixed(1):'—'}</strong><span>Putts</span></div>
+      <div class="course-stat-lines">
+        <div class="course-stat-row">
+          <div class="row-label">Last</div>
+          <div class="course-stat"><strong>${lastStats.score??'—'}</strong><span>Score</span></div>
+          <div class="course-stat"><strong>${pctVal(lastStats.fw)}</strong><span>FH</span></div>
+          <div class="course-stat"><strong>${pctVal(lastStats.gir)}</strong><span>GIR</span></div>
+          <div class="course-stat"><strong>${numVal(lastStats.putts)}</strong><span>Putts</span></div>
+        </div>
+        <div class="course-stat-row">
+          <div class="row-label">All</div>
+          <div class="course-stat"><strong>${allStats.score==null?'—':allStats.score.toFixed(1)}</strong><span>Avg</span></div>
+          <div class="course-stat"><strong>${pctVal(allStats.fw)}</strong><span>FH</span></div>
+          <div class="course-stat"><strong>${pctVal(allStats.gir)}</strong><span>GIR</span></div>
+          <div class="course-stat"><strong>${numVal(allStats.putts)}</strong><span>Putts</span></div>
+        </div>
       </div></div>
     </section>
 
     <div class="section-head"><div><div class="eyebrow">3 INSIGHTS · LAST ${Math.min(3,rounds.length)||0} HERE</div><h2>What matters tomorrow</h2></div></div>
     <div class="card key-list">${keys.map((k,i)=>`<div class="key"><div class="key-num">${i+1}</div><div><strong>${k.title}</strong><span class="muted">${k.text}</span></div></div>`).join('')}</div>
 
-    <div class="section-head"><div><div class="eyebrow">COURSE MEMORY</div><h2>Holes to know</h2></div><button class="button secondary" onclick="setView('memory')">See all</button></div>
+    <div class="section-head"><div><div class="eyebrow">COURSE MEMORY</div><h2>Priority holes</h2></div><button class="button secondary" onclick="setView('memory')">See all</button></div>
     <div class="risk-legend"><span class="chip"><span class="risk-dot">L</span> Low risk</span><span class="chip"><span class="risk-dot" style="background:var(--warning);color:#2a2200">M</span> Medium risk</span><span class="chip"><span class="risk-dot" style="background:var(--danger);color:#fff">H</span> High risk</span></div>
-    <div class="hole-grid">${mem.slice(0,6).map(renderHoleCard).join('')}</div>
+    <div class="hole-grid">${priority.map(h=>renderHoleCard(h,true)).join('')}</div>
 
     ${latest?`<div class="section-head"><div><div class="eyebrow">LAST TIME HERE</div><h2>${fmtDate(latest.date)} · ${latest.gross}</h2></div></div>
     <div class="card">
@@ -323,17 +390,22 @@ function pregame(){
   `;
 }
 
-function renderHoleCard(h){
+function renderHoleCard(h,showPriority=false){
   const last=holeLastRound(state.selectedCourseId,h.hole);
   const insight=usefulHoleInsight(h);
   const fwAll=h.par===3?'—':(h.fw==null?'—':`${h.fw}%`);
-  const fwLast=h.par===3?'—':(last?.fw==null?'—':last.fw?'Yes':'No');
-  const girLast=last?.gir==null?'—':last.gir?'Yes':'No';
+  const mark=v=>v==null?'—':v?'<span class="stat-check">✓</span>':'<span class="stat-x">✕</span>';
+  const fwLast=h.par===3?'—':mark(last?.fw);
+  const girLast=mark(last?.gir);
+  const priorityTag=showPriority&&h.priorityType
+    ? `<div class="priority-tag ${h.priorityType}">${h.priorityType==='confidence'?'Hard-hole strength':'Protect here'}</div>`
+    : '';
   return `<div class="hole-card risk-${h.risk}">
     <div class="hole-top">
       <div><span class="hole-number">${h.hole}</span> <span class="muted">Par ${h.par}</span></div>
       <span class="risk-dot" title="${riskLabel(h)}">${riskLetter(h)}</span>
     </div>
+    ${priorityTag}
     <div class="hole-stats">
       <div class="hole-stat-row">
         <div class="row-label">Last</div>
@@ -398,7 +470,7 @@ function roundsView(){
  <div class="stat-tabs">${Object.entries(roundStatDefs).map(([k,x])=>`<button class="stat-tab ${k===key?'active':''}" data-round-stat="${k}">${x.short}</button>`).join('')}</div>
  <div class="filter-tabs"><button class="filter-tab ${state.roundFilter==='18'?'active':''}" data-round-filter="18">18 holes</button><button class="filter-tab ${state.roundFilter==='all'?'active':''}" data-round-filter="all">All</button><button class="filter-tab ${state.roundFilter==='9'?'active':''}" data-round-filter="9">9 holes</button></div>
  ${roundsChart(sorted,key)}
- <div class="section-head"><div><div class="eyebrow">ROUND LIST</div><h2>Score by round</h2></div></div><div class="card">${sorted.map(r=>{const c=course(r.courseId),diff=scoreDifferential(r),sel=String(state.selectedRoundId)===String(r.id);return `<div class="round-row round-summary ${sel?'selected':''}" data-round-row="${r.id}"><div><strong>${c.name}</strong><div class="muted">${fmtDate(r.date)} · ${c.tees} tees · Par ${c.par} · ${r.holes} holes</div></div><div class="score-big">${r.gross}</div><div><span class="badge">Diff ${diff==null?'—':diff.toFixed(1)}</span></div></div>`}).join('')}</div>`;
+ <div class="section-head"><div><div class="eyebrow">ROUND LIST</div><h2>Score by round</h2></div></div><div class="card">${sorted.map(r=>{const c=course(r.courseId),diff=scoreDifferential(r),sel=String(state.selectedRoundId)===String(r.id);return `<div class="round-row round-summary ${sel?'selected':''}" data-round-row="${r.id}"><div><strong>${c.name}</strong><div class="muted">${fmtDate(r.date)} · ${c.tees} tees · Par ${c.par} · ${r.holes} holes</div></div><div class="score-big">${r.gross}${sel?`<span class="score-over">${r.gross-c.par>=0?'+':''}${r.gross-c.par}</span>`:''}</div><div><span class="badge">Diff ${diff==null?'—':diff.toFixed(1)}</span></div></div>`}).join('')}</div>`;
 }
 function detailedPuttingRounds(){return [...new Set(db.puttingDetails.map(p=>p.date+'|'+p.course))].sort().reverse()}
 function selectedPutting(){return db.puttingDetails.filter(p=>state.puttingSelections.has(p.date+'|'+p.course))}
