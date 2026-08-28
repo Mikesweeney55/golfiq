@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfIQ v9.1</title>
+  <title>GolfIQ v9.2</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -158,7 +158,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div>
         <div class="eyebrow">AI GOLF CADDIE</div>
-        <h1>GolfIQ <span style="font-size:.45em;color:var(--muted);font-weight:800;vertical-align:middle">v9.1</span></h1>
+        <h1>GolfIQ <span style="font-size:.45em;color:var(--muted);font-weight:800;vertical-align:middle">v9.2</span></h1>
       </div>
       <button id="importBtn" class="button secondary">Import Round</button>
     </header>
@@ -594,21 +594,26 @@ function targetPuttingGoals(hcp){
   if(t<=15)return {'0–3 ft':[87,13,0],'4–6 ft':[57,41,2],'7–10 ft':[27,69,4],'11–20 ft':[11,83,6],'21–40 ft':[4,87,9],'40+ ft':[2,82,16]};
   return {'0–3 ft':[84,16,0],'4–6 ft':[50,47,3],'7–10 ft':[22,72,6],'11–20 ft':[9,83,8],'21–40 ft':[3,85,12],'40+ ft':[1,80,19]};
 }
-function cellTone(actual,target,kind){
-  if(actual==null)return 'empty';
-  const delta=kind==='3+' ? target-actual : actual-target;
-  if(delta>=0)return 'good';
-  if(delta>=-7)return 'ok';
-  return 'bad';
+function cellTone(label,outcome){
+  // Color means "how good is this result from this distance?"
+  // It does NOT judge a complementary percentage in isolation.
+  // Example: from 0–3 ft, a 2-putt is a bad outcome even when it happened 0% of the time.
+  if(outcome==='3+') return 'bad';
+  if(outcome==='1') return 'good';
+  if(label==='0–3 ft') return 'bad';
+  if(label==='4–6 ft') return 'ok';
+  if(label==='7–10 ft') return 'ok';
+  return 'good';
 }
 function puttingOutcomeGrid(p){
-  const stats=puttingBandStats(p),goals=targetPuttingGoals(state.targetHandicap);
+  const stats=puttingBandStats(p);
   const rows=stats.map(z=>{
     const one=z.n?100*z.one/z.n:null;
     const three=z.n?100*z.three/z.n:null;
     const two=z.n?100*(z.n-z.one-z.three)/z.n:null;
-    const vals=[one,two,three], target=goals[z.label];
-    return `<div class="putt-grid-dist">${z.label}</div>${vals.map((v,i)=>`<div class="putt-cell ${cellTone(v,target[i],i===2?'3+':'normal')}"><strong>${v==null?'—':Math.round(v)+'%'}</strong><span>${z.n?`${i===0?z.one:i===1?z.n-z.one-z.three:z.three}/${z.n}`:'No data'}</span></div>`).join('')}`;
+    const vals=[one,two,three], outcomes=['1','2','3+'];
+    const counts=[z.one,z.n-z.one-z.three,z.three];
+    return `<div class="putt-grid-dist">${z.label}</div>${vals.map((v,i)=>`<div class="putt-cell ${v==null?'empty':cellTone(z.label,outcomes[i])}"><strong>${v==null?'—':Math.round(v)+'%'}</strong><span>${z.n?`${counts[i]}/${z.n}`:'No data'}</span></div>`).join('')}`;
   }).join('');
   return `<div class="putt-grid-wrap"><div class="putt-grid"><div></div><div class="putt-grid-head">1 putt</div><div class="putt-grid-head">2 putts</div><div class="putt-grid-head">3+ putts</div>${rows}</div></div>`;
 }
@@ -632,7 +637,7 @@ function heatMap(){
  const practiceHtml=practice.length?practice.map((z,i)=>`<div class="practice-item"><div class="practice-rank">${i+1}</div><div><strong>${z.label}</strong><div class="why">${z.why}</div></div><div class="practice-score">${z.priority>0.9?'High':z.priority>0.45?'Med':'Low'} focus</div></div>`).join(''):`<div class="muted">Add more detailed putting rounds to build a practice recommendation.</div>`;
  return `<div class="target-row"><label for="target-hcp">Target handicap</label><select id="target-hcp" class="target-select"><option value="5" ${state.targetHandicap===5?'selected':''}>5</option><option value="10" ${state.targetHandicap===10?'selected':''}>10</option><option value="15" ${state.targetHandicap===15?'selected':''}>15</option><option value="20" ${state.targetHandicap===20?'selected':''}>20+</option></select></div>
  <div class="putting-summary"><div class="card"><div class="metric-label">Holes tracked</div><div class="metric">${total}</div></div><div class="card"><div class="metric-label">1-putts</div><div class="metric">${ones}</div><div class="muted">${total?Math.round(100*ones/total):0}%</div></div><div class="card"><div class="metric-label">3-putts</div><div class="metric">${threes}</div></div><div class="card"><div class="metric-label">Best zone</div><div class="metric" style="font-size:20px">${best?.label||'—'}</div><div class="muted">${best?(best.sg>=0?'+':'')+best.sg.toFixed(2)+' SG':'—'}</div></div></div>
- <div class="card"><div class="eyebrow">PUTTING OUTCOME GRID</div><h3 style="margin-top:4px">Results by starting distance</h3>${puttingOutcomeGrid(p)}<div class="target-note">Green = meeting/exceeding the selected practice target. Yellow = within 7 points. Red = needs work. Target bands are GolfIQ coaching targets, not official USGA/GHIN benchmarks.</div></div>
+ <div class="card"><div class="eyebrow">PUTTING OUTCOME GRID</div><h3 style="margin-top:4px">Results by starting distance</h3>${puttingOutcomeGrid(p)}<div class="target-note">Cell color describes the quality of that outcome from that distance: green = good result, yellow = acceptable, red = poor result. The percentage shows how often that outcome occurred. Target handicap is used for the practice benchmark.</div></div>
  <div class="card" style="margin-top:12px"><div class="eyebrow">PRACTICE PLAN</div><h3 style="margin-top:4px">Where to spend your putting time</h3><div class="practice-focus">${practiceHtml}</div></div>`;
 }
 
