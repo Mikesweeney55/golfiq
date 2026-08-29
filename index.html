@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfIQ v11.0</title>
+  <title>GolfIQ v11.1</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -296,6 +296,12 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
 @keyframes spin{to{transform:rotate(360deg)}}
 .bootstrap-error{color:#ff9b96;font-size:12px;margin-top:8px}
 
+
+.button.danger{background:rgba(255,59,48,.10);border:1px solid rgba(255,59,48,.42);color:#ff8c85}
+.button.danger:hover{background:rgba(255,59,48,.16);border-color:rgba(255,59,48,.62)}
+.dialog-actions.split{justify-content:space-between;gap:10px}
+.dialog-actions-right{display:flex;gap:8px;margin-left:auto}
+
 </style>
 </head>
 <body>
@@ -303,7 +309,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div class="topbar-left">
         <div class="brand-title">GolfIQ</div>
-        <div class="brand-meta"><span>v11.0</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
+        <div class="brand-meta"><span>v11.1</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
       </div>
 
       <div class="giq-logo" aria-label="GIQ">
@@ -397,9 +403,12 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
           </label>
         </div>
         <div class="edit-note">Changing gross score here does not rewrite the hole-by-hole scorecard. Use it only to correct an import-level error.</div>
-        <div class="dialog-actions">
-          <button id="cancelEditRound" class="button secondary" type="button">Cancel</button>
-          <button id="saveEditRound" class="button primary" type="button">Save Changes</button>
+        <div class="dialog-actions split">
+          <button id="deleteEditRound" class="button danger" type="button">Delete Round</button>
+          <div class="dialog-actions-right">
+            <button id="cancelEditRound" class="button secondary" type="button">Cancel</button>
+            <button id="saveEditRound" class="button primary" type="button">Save Changes</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1208,6 +1217,23 @@ function openEditRound(roundId){
 }
 document.getElementById('closeEditRound').onclick=()=>editDlg.close();
 document.getElementById('cancelEditRound').onclick=()=>editDlg.close();
+
+document.getElementById('deleteEditRound').onclick=async()=>{
+  const id=document.getElementById('editImportId').value;
+  if(!id)return;
+  if(!confirm('Delete this round from GolfIQ? This cannot be undone.'))return;
+  const btn=document.getElementById('deleteEditRound');
+  try{
+    btn.disabled=true;btn.textContent='Deleting…';
+    await callImportFunction({action:'delete',id});
+    editDlg.close();
+    await bootstrapGolfIQ();
+  }catch(e){
+    alert(e.message);
+    btn.disabled=false;btn.textContent='Delete Round';
+  }
+};
+
 
 document.getElementById('saveEditRound').onclick=async()=>{
   const btn=document.getElementById('saveEditRound');
