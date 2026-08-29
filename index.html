@@ -378,6 +378,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
 .groups-hero{padding:20px}.groups-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.group-feature{padding:14px}.group-feature h3{font-size:13px;margin:5px 0}.coming-badge{display:inline-block;border:1px solid rgba(184,234,104,.25);color:var(--accent);border-radius:999px;padding:4px 7px;font-size:9px;font-weight:900}
 @media(max-width:640px){.swing-grid,.groups-grid{grid-template-columns:1fr}.user-chip{display:none}.user-tools{gap:3px}.mini-link{font-size:9px}}
 
+.gr-brand{display:flex;align-items:center;gap:10px;justify-self:start}.gr-mark{width:48px;height:48px;border:2px solid var(--accent);border-radius:50%;display:grid;place-items:center;position:relative;background:#102019;box-shadow:inset 0 0 0 3px #102019,0 0 0 1px rgba(184,234,104,.2)}.gr-mark:before,.gr-mark:after{content:"";position:absolute;background:var(--accent);opacity:.55}.gr-mark:before{width:1px;height:100%;left:50%}.gr-mark:after{height:1px;width:100%;top:50%}.gr-cross{font-size:17px;font-weight:950;letter-spacing:-.06em;color:#f5f7f6;z-index:1}.gr-flag{position:absolute;font-size:10px;color:var(--accent);right:4px;top:4px;z-index:2}.gr-word{display:grid;line-height:1}.gr-word strong{font-size:16px;letter-spacing:.08em}.gr-word small{font-size:7px;letter-spacing:.12em;color:var(--accent);margin-top:5px;font-weight:850}@media(max-width:520px){.gr-word small{display:none}.gr-word strong{font-size:13px}.gr-mark{width:42px;height:42px}}
 </style>
 </head>
 <body>
@@ -411,7 +412,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
   <div id="appShell" class="app-shell" style="display:none">
     <header class="topbar">
       <div class="topbar-left">
-        <div class="brand-title">GolfRecon</div>
+        <div class="gr-brand" aria-label="GolfRecon"><div class="gr-mark"><span class="gr-cross">GR</span><span class="gr-flag">⚑</span></div><div class="gr-word"><strong>GOLFRECON</strong><small>KNOW YOUR GAME. PLAY SMARTER.</small></div></div>
         <div class="brand-meta"><span>v12.0 Beta</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
       </div>
 
@@ -445,7 +446,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <nav class="bottom-nav">
       <button data-view="pregame" class="nav-item active"><span>⛳</span><small>Pregame</small></button>
       <button data-view="rounds" class="nav-item"><span>📊</span><small>Rounds</small></button>
-      <button data-view="groups" class="nav-item"><span>👥</span><small>Groups</small></button>
+      <button data-view="groups" class="nav-item"><span>👥</span><small>Platoons</small></button>
       <button data-view="game" class="nav-item"><span>🏌️</span><small>My Game</small></button>
     </nav>
   </div>
@@ -1174,7 +1175,7 @@ function groupsView(){
     <h2 style="margin:10px 0 6px">Golf is better with your crew.</h2>
     <div class="muted">This will become the home for recurring groups, league seasons, events, standings, previews, recaps and shareable trash talk.</div>
     <div class="groups-grid">
-      <div class="card group-feature"><span>👥</span><h3>Groups</h3><div class="muted">Create a crew, invite golfers and keep shared history.</div></div>
+      <div class="card group-feature"><span>👥</span><h3>Platoons</h3><div class="muted">Create a crew, invite golfers and keep shared history.</div></div>
       <div class="card group-feature"><span>🏆</span><h3>Leagues</h3><div class="muted">Schedules, handicaps, standings and season-long competitions.</div></div>
       <div class="card group-feature"><span>🗓️</span><h3>Events</h3><div class="muted">Pregame previews, formats, teams, postgame recaps and cards.</div></div>
     </div>
