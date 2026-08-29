@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfIQ v9.6</title>
+  <title>GolfIQ v10.0</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -166,6 +166,45 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
 .putt-legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)}
 .putt-legend-swatch{width:10px;height:10px;border-radius:3px}
 
+
+.tendency-grid{margin-bottom:18px}
+.tendency-card{overflow:hidden}
+.direction-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:8px}
+.direction-card{border:1px solid var(--line);background:#13211b;border-radius:14px;padding:12px;overflow:hidden}
+.direction-title{font-size:12px;font-weight:900;margin-bottom:6px}
+.direction-sub{font-size:10px;color:var(--muted);margin-bottom:8px}
+.direction-viz{position:relative;width:min(100%,300px);aspect-ratio:1/1;margin:0 auto}
+.direction-ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:58%;height:58%;border-radius:50%;border:16px solid rgba(110,160,230,.12);box-sizing:border-box}
+.direction-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:36%;height:36%;border-radius:50%;background:#4f73ff;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-weight:900}
+.direction-center .check{font-size:20px;line-height:1}.direction-center .pct{font-size:18px;line-height:1.1;margin-top:3px}
+.dir-label{position:absolute;font-size:11px;line-height:1.2;text-align:center;color:var(--text);min-width:62px}
+.dir-label strong{display:block;font-size:13px}
+.dir-top{left:50%;top:3%;transform:translateX(-50%)}.dir-bottom{left:50%;bottom:2%;transform:translateX(-50%)}
+.dir-left{left:1%;top:50%;transform:translateY(-50%)}.dir-right{right:1%;top:50%;transform:translateY(-50%)}
+.dir-wedge{position:absolute;left:50%;top:50%;width:34%;height:34%;background:rgba(110,160,230,.20);transform-origin:0 0;border-radius:0 100% 0 0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}
+.dir-wedge.top{transform:rotate(-135deg) skew(-6deg,-6deg)}
+.dir-wedge.right{transform:rotate(-45deg) skew(-6deg,-6deg)}
+.dir-wedge.bottom{transform:rotate(45deg) skew(-6deg,-6deg)}
+.dir-wedge.left{transform:rotate(135deg) skew(-6deg,-6deg)}
+.mygame-accuracy{margin-top:16px}
+@media(min-width:760px){.direction-grid{grid-template-columns:1fr 1fr}}
+
+
+.import-card{width:min(94vw,760px);max-height:90vh;overflow:auto}
+.import-status{min-height:22px;margin-top:10px;font-size:12px;color:var(--muted)}
+.import-status.error{color:#ff8a84}.import-status.ok{color:#7ee49a}
+.import-review{display:grid;gap:10px;margin-top:10px}
+.import-summary{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.import-kpi{background:#13211b;border:1px solid var(--line);border-radius:12px;padding:10px}
+.import-kpi .k{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.import-kpi .v{font-size:20px;font-weight:900;margin-top:3px}
+.import-warning{border:1px solid rgba(255,212,0,.35);background:rgba(255,212,0,.08);padding:9px;border-radius:10px;font-size:12px}
+.import-hole-table{width:100%;border-collapse:collapse;font-size:11px}
+.import-hole-table th,.import-hole-table td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:center}
+.import-hole-table th:first-child,.import-hole-table td:first-child{text-align:left}
+.import-confidence{font-size:11px;color:var(--muted)}
+@media(max-width:560px){.import-summary{grid-template-columns:1fr 1fr}.import-hole-table{font-size:10px}}
+
 </style>
 </head>
 <body>
@@ -173,7 +212,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div>
         <div class="eyebrow">AI GOLF CADDIE</div>
-        <h1>GolfIQ <span style="font-size:.45em;color:var(--muted);font-weight:800;vertical-align:middle">v9.6</span></h1>
+        <h1>GolfIQ <span style="font-size:.45em;color:var(--muted);font-weight:800;vertical-align:middle">v10.0</span></h1>
       </div>
       <button id="importBtn" class="button secondary">Import Round</button>
     </header>
@@ -189,42 +228,52 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
   </div>
 
   <dialog id="importDialog">
-    <form method="dialog" class="dialog-card">
+    <div class="dialog-card import-card">
       <div class="dialog-head">
         <div>
           <div class="eyebrow">ROUND IMPORT</div>
-          <h2>Add screenshots</h2>
+          <h2>Import screenshots</h2>
         </div>
-        <button class="icon-button" value="cancel">✕</button>
+        <button id="closeImport" class="icon-button" type="button">✕</button>
       </div>
-      <p class="muted">Screenshot import is still a prototype control. The canonical GolfIQ database is maintained separately.</p>
-      <label class="upload-zone">
-        <input id="fileInput" type="file" accept="image/*" multiple />
-        <strong>Select screenshots</strong>
-        <span>18Birdies, Garmin, Arccos, Golfshot, TheGrint, or any scorecard image</span>
-      </label>
-      <div id="fileList" class="file-list"></div>
-      <label>Source app
-        <select id="sourceSelect">
-          <option>18Birdies</option>
-          <option>Garmin Golf</option>
-          <option>Arccos</option>
-          <option>Golfshot</option>
-          <option>TheGrint</option>
-          <option>Other</option>
-        </select>
-      </label>
-      <label>Optional note
-        <input id="importNote" placeholder="e.g. Butter Brook white tees" />
-      </label>
-      <div class="dialog-actions">
-        <button class="button secondary" value="cancel">Cancel</button>
-        <button id="saveImport" type="button" class="button primary">Save Import</button>
+
+      <div id="importStepUpload">
+        <label class="upload-zone">
+          <input id="fileInput" type="file" accept="image/*" multiple />
+          <strong>Select screenshots</strong>
+          <span>18Birdies screenshots</span>
+        </label>
+        <div id="fileList" class="file-list"></div>
+        <label>Source app
+          <select id="sourceSelect">
+            <option selected>18Birdies</option>
+          </select>
+        </label>
+        <label>Optional note
+          <input id="importNote" placeholder="Course / tees if needed" />
+        </label>
+        <div id="importStatus" class="import-status"></div>
+        <div class="dialog-actions">
+          <button id="analyzeImport" type="button" class="button primary">Analyze Screenshots</button>
+        </div>
       </div>
-    </form>
+
+      <div id="importStepReview" style="display:none">
+        <div class="eyebrow">REVIEW ROUND</div>
+        <div id="importReview" class="import-review"></div>
+        <div class="dialog-actions">
+          <button id="backImport" type="button" class="button secondary">Back</button>
+          <button id="saveImport" type="button" class="button primary">Save Round</button>
+        </div>
+      </div>
+    </div>
   </dialog>
 
   <script>
+const SUPABASE_URL='https://vqpqyxamqiamblpcxqxg.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_iH2PBfgEpQ4ZhJ-x410_0Q_wqkw3yvg';
+let pendingImport=null;
+
 const db = {"player":{"id":1,"name":"Mike S.","handicap":12},"courses":[{"id":"passaconaway-white-back-9","name":"Passaconaway — Back 9","baseName":"Passaconaway","tees":"White","yardage":0,"slope":129,"rating":35.0,"par":35,"pars":[5,3,4,3,5,4,4,3,4],"holeNumbers":[10,11,12,13,14,15,16,17,18],"handicaps":[12,18,8,14,10,2,6,16,4],"segment":"Back 9"},{"id":"four-oaks-white-18-holes","name":"Four Oaks","baseName":"Four Oaks","tees":"White","yardage":0,"slope":119,"rating":66.4,"par":70,"pars":[4,5,4,3,5,4,4,4,3,4,4,3,4,4,3,4,4,4],"holeNumbers":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18],"handicaps":[16,8,6,18,10,4,2,14,12,3,5,15,13,11,17,7,9,1],"segment":"18 holes"},{"id":"candia-woods-white-18-holes","name":"Candia Woods","baseName":"Candia Woods","tees":"White","yardage":0,"slope":116,"rating":67.8,"par":71,"pars":[4,4,4,4,3,4,4,3,5,5,4,4,4,4,3,5,3,4],"holeNumbers":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18],"handicaps":[5,13,17,1,15,3,9,11,7,14,2,4,10,12,16,6,18,8],"segment":"18 holes"},{"id":"hidden-creek-black-blue-front-9","name":"Hidden Creek — Front 9","baseName":"Hidden Creek","tees":"Black/Blue","yardage":0,"slope":127,"rating":35.4,"par":36,"pars":[4,4,3,5,4,4,3,5,4],"holeNumbers":[1,2,3,4,5,6,7,8,9],"handicaps":[13,3,9,1,5,15,17,7,11],"segment":"Front 9"},{"id":"campbell-s-scot-highlands-white-18-holes","name":"Campbell's Scot. Highlands","baseName":"Campbell's Scot. Highlands","tees":"White","yardage":0,"slope":113,"rating":67.6,"par":71,"pars":[4,5,3,4,5,4,3,4,4,4,3,4,4,4,3,4,4,5],"holeNumbers":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18],"handicaps":[13,5,15,3,1,7,17,9,11,10,16,12,8,2,18,6,14,4],"segment":"18 holes"},{"id":"hickory-hills-white-18-holes","name":"Hickory Hills","baseName":"Hickory Hills","tees":"White","yardage":0,"slope":122,"rating":68.8,"par":71,"pars":[4,3,5,4,4,5,4,3,4,5,4,4,3,4,4,4,3,4],"holeNumbers":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18],"handicaps":[13,15,3,5,7,1,11,17,9,2,6,8,16,12,10,14,18,4],"segment":"18 holes"},{"id":"passaconaway-white-front-9","name":"Passaconaway — Front 9","baseName":"Passaconaway","tees":"White","yardage":0,"slope":124,"rating":34.5,"par":36,"pars":[4,4,4,3,5,4,4,4,4],"holeNumbers":[1,2,3,4,5,6,7,8,9],"handicaps":[13,9,1,5,3,11,15,7,17],"segment":"Front 9"},{"id":"butter-brook-blue-18-holes","name":"Butter Brook","baseName":"Butter Brook","tees":"Blue","yardage":0,"slope":128,"rating":70.4,"par":72,"pars":[5,4,3,4,3,4,5,3,5,4,3,5,4,3,4,5,4,4],"holeNumbers":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18],"handicaps":[7,18,5,1,6,10,4,2,8,12,17,14,3,11,16,13,15,9],"segment":"18 holes"},{"id":"butter-brook-white-18-holes","name":"Butter Brook","baseName":"Butter Brook","tees":"White","yardage":0,"slope":120,"rating":68.6,"par":72,"pars":[5,4,3,4,3,4,5,3,5,4,3,5,4,3,4,5,4,4],"holeNumbers":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18],"handicaps":[7,18,5,1,6,10,4,2,8,12,17,14,3,11,16,13,15,9],"segment":"18 holes"},{"id":"birch-hill-country-club-white-18-holes","name":"Birch Hill Country Club","baseName":"Birch Hill Country Club","tees":"White","yardage":0,"slope":119,"rating":66.1,"par":72,"pars":[4,4,5,4,3,4,3,4,5,3,5,4,4,4,4,4,3,5],"holeNumbers":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18],"handicaps":[13,11,3,7,17,5,15,9,1,18,2,12,10,4,14,8,16,6],"segment":"18 holes"},{"id":"gold-white-18-holes","name":"Gold","baseName":"Gold","tees":"White","yardage":0,"slope":128,"rating":69.3,"par":72,"pars":[4,5,4,4,3,4,4,4,4,5,3,4,3,4,4,5,4,4],"holeNumbers":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18],"handicaps":[9,7,1,11,17,3,15,5,13,12,18,4,14,8,16,6,2,10],"segment":"18 holes"},{"id":"bill-flynn-s-windham-white-18-holes","name":"Bill Flynn's Windham","baseName":"Bill Flynn's Windham","tees":"White","yardage":0,"slope":122,"rating":67.0,"par":72,"pars":[5,4,3,4,5,3,4,4,3,4,4,5,4,3,5,4,4,4],"holeNumbers":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18],"handicaps":[5,7,13,11,3,17,9,1,15,18,6,4,14,16,8,2,12,10],"segment":"18 holes"},{"id":"atkinson-country-club-white-18-holes","name":"Atkinson Country Club","baseName":"Atkinson Country Club","tees":"White","yardage":0,"slope":131,"rating":70.1,"par":72,"pars":[4,5,3,4,4,5,4,3,4,4,3,5,4,3,4,5,4,4],"holeNumbers":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18],"handicaps":[17,3,15,11,9,5,1,13,7,8,18,2,10,16,4,14,12,6],"segment":"18 holes"}],"rounds":[{"id":"1","date":"2025-08-28","courseId":"passaconaway-white-back-9","gross":47,"net":38,"scoreToPar":12,"holes":9,"scores":[7,4,6,3,7,5,7,4,4],"fairways":[0,null,0,null,1,0,0,null,1],"gir":[0,0,0,1,0,0,0,0,0],"putts":[3,2,1,2,2,2,2,2,1],"chips":[0,1,2,0,1,1,1,1,1],"sand":[0,0,null,0,null,0,null,0,0],"penalties":[0,0,null,0,null,0,null,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"22","date":"2026-05-03","courseId":"four-oaks-white-18-holes","gross":83,"net":71,"scoreToPar":13,"holes":18,"scores":[5,5,5,4,5,6,5,5,4,5,4,4,4,5,3,4,5,5],"fairways":[0,1,1,null,0,1,1,1,null,1,1,null,1,1,null,0,1,0],"gir":[1,1,0,0,0,0,0,0,0,0,1,0,1,0,1,1,0,0],"putts":[3,2,1,2,1,3,2,2,2,2,2,2,2,2,2,2,2,1],"chips":[0,0,0,1,1,1,0,1,0,0,0,1,0,1,0,0,1,1],"sand":[0,1,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"23","date":"2026-05-17","courseId":"four-oaks-white-18-holes","gross":84,"net":73,"scoreToPar":14,"holes":18,"scores":[5,4,5,4,5,6,4,4,4,4,5,4,6,4,4,5,5,6],"fairways":[1,1,1,null,1,0,1,0,null,0,1,null,0,1,null,1,0,0],"gir":[1,1,0,1,0,0,0,1,0,1,0,0,0,1,0,0,0,0],"putts":[3,2,2,3,1,1,1,2,2,2,2,2,3,2,2,2,2,3],"chips":[0,0,1,0,1,1,1,0,1,0,1,0,1,0,0,1,1,0],"sand":[0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0],"penalties":[0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"31","date":"2026-05-25","courseId":"campbell-s-scot-highlands-white-18-holes","gross":83,"net":72,"scoreToPar":12,"holes":18,"scores":[5,5,4,4,6,5,3,4,5,5,4,5,5,4,4,6,4,5],"fairways":[0,1,null,1,1,1,null,0,1,1,null,0,0,1,null,0,0,1],"gir":[0,1,0,1,1,1,1,1,0,0,1,0,0,1,1,0,1,1],"putts":[2,2,2,2,3,3,2,2,2,2,3,2,2,2,3,2,2,2],"chips":[1,0,1,0,0,0,0,1,1,1,0,1,0,0,0,1,0,0],"sand":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],"source":"18Birdies","importConfidence":0.99,"fairwayDistribution":{"hitPct":57.1,"missLeftPct":28.6,"missRightPct":14.3,"missShortPct":0.0,"missLongPct":0.0,"missFairwaysHitPct":0.0},"girDistribution":{"hitPct":61.1,"missShortPct":22.2,"missLeftPct":0.0,"missRightPct":5.6,"missLongPct":5.6,"missGirPct":5.6,"noChancePct":0.0}},{"id":"24","date":"2026-05-31","courseId":"four-oaks-white-18-holes","gross":86,"net":75,"scoreToPar":16,"holes":18,"scores":[5,6,5,4,7,5,6,5,4,5,5,3,5,4,3,5,5,4],"fairways":[1,1,1,null,0,1,0,1,null,1,1,null,0,1,null,1,1,0],"gir":[0,0,0,1,0,0,0,0,0,0,0,1,1,1,1,0,0,0],"putts":[2,2,2,3,2,2,3,2,2,2,2,2,3,2,2,2,2,1],"chips":[0,2,1,0,2,0,1,1,0,1,1,0,0,0,0,1,1,1],"sand":[1,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"2","date":"2026-06-04","courseId":"passaconaway-white-back-9","gross":46,"net":37,"scoreToPar":11,"holes":9,"scores":[5,3,6,4,7,6,6,5,4],"fairways":[0,null,1,null,0,0,0,null,0],"gir":[0,1,0,1,0,0,0,0,0],"putts":[1,2,2,3,2,3,2,2,1],"chips":[0,0,1,0,0,0,1,0,1],"sand":[0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,1,0],"source":"18Birdies","importConfidence":0.99},{"id":"32","date":"2026-06-06","courseId":"campbell-s-scot-highlands-white-18-holes","gross":77,"net":66,"scoreToPar":6,"holes":18,"scores":[4,6,4,6,5,4,3,4,4,4,3,5,4,4,2,5,4,6],"fairways":[1,0,null,1,1,1,null,1,1,0,null,1,1,1,null,1,1,1],"gir":[1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1],"putts":[2,3,3,3,2,2,2,2,2,2,2,2,2,2,1,3,2,3],"chips":[0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0],"sand":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99,"fairwayDistribution":{"hitPct":85.7,"missLeftPct":7.1,"missRightPct":7.1,"missShortPct":0.0,"missLongPct":0.0,"missFairwaysHitPct":0.0},"girDistribution":{"hitPct":88.9,"missShortPct":11.1,"missLeftPct":0.0,"missRightPct":0.0,"missLongPct":0.0,"missGirPct":0.0,"noChancePct":0.0}},{"id":"25","date":"2026-06-07","courseId":"four-oaks-white-18-holes","gross":84,"net":74,"scoreToPar":14,"holes":18,"scores":[5,6,5,5,5,4,5,3,4,4,5,5,5,5,3,4,5,6],"fairways":[1,0,1,null,1,1,1,1,null,0,0,null,0,1,null,1,1,0],"gir":[1,0,0,0,1,1,0,1,0,1,0,0,1,0,1,0,1,0],"putts":[3,2,2,3,2,2,2,1,2,2,2,2,3,2,2,1,3,2],"chips":[0,0,0,1,0,0,1,0,1,0,0,1,0,1,0,1,0,1],"sand":[0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],"source":"18Birdies","importConfidence":0.99},{"id":"33","date":"2026-06-12","courseId":"campbell-s-scot-highlands-white-18-holes","gross":82,"net":72,"scoreToPar":11,"holes":18,"scores":[5,6,3,5,6,5,3,5,6,4,3,5,5,5,4,4,4,4],"fairways":[0,0,null,1,1,0,null,0,1,0,null,1,0,0,null,1,1,0],"gir":[1,0,1,0,1,0,1,1,0,1,1,1,0,0,1,1,1,1],"putts":[3,2,2,2,3,2,2,3,3,2,2,3,2,2,3,2,2,1],"chips":[0,2,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"sand":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99,"fairwayDistribution":{"hitPct":42.9,"missLeftPct":14.3,"missRightPct":42.9,"missShortPct":0.0,"missLongPct":0.0,"missFairwaysHitPct":0.0},"girDistribution":{"hitPct":66.7,"missShortPct":27.8,"missLeftPct":0.0,"missRightPct":5.6,"missLongPct":0.0,"missGirPct":0.0,"noChancePct":0.0}},{"id":"26","date":"2026-06-14","courseId":"four-oaks-white-18-holes","gross":86,"net":76,"scoreToPar":16,"holes":18,"scores":[4,5,6,3,5,5,4,4,5,5,6,3,5,4,4,6,6,6],"fairways":[0,1,1,null,1,1,0,0,null,1,0,null,0,1,null,0,1,1],"gir":[1,1,0,1,1,0,1,1,0,0,0,1,0,0,0,0,0,0],"putts":[2,2,3,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2],"chips":[0,1,1,0,0,1,0,0,0,0,1,0,1,1,1,0,2,1],"sand":[0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"3","date":"2026-06-28","courseId":"candia-woods-white-18-holes","gross":82,"net":70,"scoreToPar":11,"holes":18,"scores":[4,5,5,4,4,7,4,3,5,6,4,5,5,5,3,5,4,4],"fairways":[1,0,1,1,null,1,1,null,0,1,1,1,1,1,null,1,null,1],"gir":[0,0,0,0,0,0,1,1,1,0,1,0,1,1,1,1,0,1],"putts":[1,2,2,1,2,3,2,2,2,2,2,2,3,3,2,2,2,2],"chips":[1,1,1,1,1,0,0,0,0,1,0,0,0,0,0,1,1,0],"sand":[0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"4","date":"2026-07-02","courseId":"hidden-creek-black-blue-front-9","gross":45,"net":38,"scoreToPar":9,"holes":9,"scores":[5,5,4,6,4,5,4,7,5],"fairways":[1,1,null,0,0,1,null,1,1],"gir":[1,0,0,0,1,0,0,0,0],"putts":[3,2,2,2,2,2,2,2,2],"chips":[0,1,1,0,0,1,1,1,0],"sand":[0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99,"fairwayDistribution":{"hitPct":71.4,"missLeftPct":14.3,"missRightPct":14.3,"missShortPct":0.0,"missLongPct":0.0,"missFairwaysHitPct":0.0},"girDistribution":{"hitPct":22.2,"missShortPct":33.3,"missLeftPct":0.0,"missRightPct":22.2,"missLongPct":0.0,"missGirPct":22.2,"noChancePct":0.0}},{"id":"5","date":"2026-07-03","courseId":"campbell-s-scot-highlands-white-18-holes","gross":87,"net":78,"scoreToPar":16,"holes":18,"scores":[5,6,4,4,6,4,4,6,5,4,3,5,6,5,5,5,4,6],"fairways":[1,0,null,1,0,1,null,0,1,0,null,0,0,0,null,1,0,0],"gir":[0,1,0,0,0,0,0,0,0,1,1,1,0,0,0,1,1,1],"putts":[2,3,2,1,2,1,1,3,2,2,2,3,2,2,3,3,2,3],"chips":[1,0,1,0,0,1,1,1,1,1,0,0,0,1,0,0,0,0],"sand":[0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99,"fairwayDistribution":{"hitPct":35.7,"missLeftPct":35.7,"missRightPct":28.6,"missShortPct":0.0,"missLongPct":0.0,"missFairwaysHitPct":0.0},"girDistribution":{"hitPct":38.9,"missShortPct":16.7,"missLeftPct":5.6,"missRightPct":11.1,"missLongPct":11.1,"missGirPct":16.7,"noChancePct":0.0}},{"id":"6","date":"2026-07-05","courseId":"hickory-hills-white-18-holes","gross":81,"net":70,"scoreToPar":10,"holes":18,"scores":[5,5,5,6,5,6,5,3,4,4,5,5,4,4,5,3,3,4],"fairways":[0,null,1,1,1,1,1,null,1,1,0,1,null,1,1,1,null,1],"gir":[0,0,1,0,0,0,0,1,1,1,0,0,0,0,0,1,1,0],"putts":[2,3,2,2,2,2,2,2,2,1,2,2,2,1,2,1,2,1],"chips":[1,1,0,2,1,0,1,0,0,0,1,1,1,1,1,0,0,1],"sand":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"7","date":"2026-07-09","courseId":"passaconaway-white-front-9","gross":47,"net":41,"scoreToPar":11,"holes":9,"scores":[5,6,7,4,6,5,5,4,5],"fairways":[1,0,1,null,1,1,0,1,1],"gir":[1,0,0,0,0,1,0,1,0],"putts":[3,2,2,2,2,3,2,2,2],"chips":[0,2,2,1,1,0,0,0,1],"sand":[0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"8","date":"2026-07-10","courseId":"butter-brook-blue-18-holes","gross":89,"net":77,"scoreToPar":17,"holes":18,"scores":[7,4,4,5,3,5,6,4,7,5,3,6,5,4,5,5,6,5],"fairways":[0,1,null,0,null,0,0,null,0,1,null,1,0,null,0,0,0,1],"gir":[0,1,0,1,1,0,0,0,0,0,1,0,0,0,0,1,0,0],"putts":[3,2,2,3,2,1,2,2,2,2,2,1,2,2,2,2,3,1],"chips":[0,0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,0,1],"sand":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"9","date":"2026-07-12","courseId":"candia-woods-white-18-holes","gross":83,"net":74,"scoreToPar":12,"holes":18,"scores":[5,6,5,6,5,4,4,3,5,6,4,4,5,5,4,4,3,5],"fairways":[1,0,0,0,null,0,1,null,1,1,1,1,0,1,null,1,null,0],"gir":[0,0,0,0,0,0,1,1,1,1,1,1,0,1,1,1,1,0],"putts":[2,3,2,2,3,1,2,2,2,3,2,2,1,3,3,2,2,2],"chips":[0,0,1,1,0,1,0,0,0,0,0,0,1,0,0,0,0,1],"sand":[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"10","date":"2026-07-16","courseId":"passaconaway-white-back-9","gross":48,"net":40,"scoreToPar":13,"holes":9,"scores":[7,4,5,5,7,5,6,4,5],"fairways":[1,null,0,null,0,0,0,null,1],"gir":[0,0,0,0,0,0,0,0,0],"putts":[2,2,2,3,2,1,3,2,2],"chips":[1,0,0,1,1,1,0,0,0],"sand":[0,1,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"11","date":"2026-07-17","courseId":"butter-brook-white-18-holes","gross":85,"net":75,"scoreToPar":13,"holes":18,"scores":[5,5,3,5,5,6,5,5,6,5,3,5,5,3,5,6,4,4],"fairways":[1,0,null,0,null,1,1,null,0,1,null,0,1,null,1,0,1,1],"gir":[1,0,1,0,0,0,1,0,0,0,0,1,0,1,0,0,0,1],"putts":[2,2,2,1,3,2,2,2,2,2,1,2,2,2,2,2,1,2],"chips":[0,1,0,2,0,2,0,2,1,1,1,0,0,0,1,1,1,0],"sand":[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"12","date":"2026-07-20","courseId":"birch-hill-country-club-white-18-holes","gross":85,"net":78,"scoreToPar":13,"holes":18,"scores":[5,4,6,6,4,6,4,5,6,3,5,4,4,5,5,5,3,5],"fairways":[0,1,0,0,null,0,null,1,1,null,1,0,0,0,0,0,null,1],"gir":[0,1,1,0,0,0,0,1,0,1,1,1,1,1,1,0,1,0],"putts":[2,2,3,3,2,3,2,3,2,2,2,2,2,3,3,2,2,1],"chips":[1,0,0,1,1,1,1,0,1,0,1,0,0,0,0,1,0,1],"sand":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"13","date":"2026-07-21","courseId":"gold-white-18-holes","gross":82,"net":71,"scoreToPar":10,"holes":18,"scores":[5,6,5,5,3,4,5,5,5,5,3,5,4,5,4,5,4,4],"fairways":[0,0,0,1,null,1,0,0,1,1,null,1,null,1,0,1,1,1],"gir":[0,1,0,0,1,1,0,0,0,1,1,1,0,0,1,1,1,1],"putts":[2,3,2,2,2,2,2,2,2,2,2,3,2,2,2,3,2,2],"chips":[0,1,1,0,0,0,1,0,0,1,0,0,1,1,0,0,0,0],"sand":[0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"14","date":"2026-07-23","courseId":"gold-white-18-holes","gross":90,"net":79,"scoreToPar":18,"holes":18,"scores":[4,6,5,6,5,6,4,5,6,5,4,4,4,5,5,6,5,5],"fairways":[1,0,0,1,null,0,1,0,0,0,null,1,null,0,1,1,1,0],"gir":[0,0,0,0,0,0,1,1,0,1,0,0,1,0,0,0,1,1],"putts":[1,2,2,2,2,2,2,3,2,2,2,1,3,2,2,2,3,3],"chips":[1,2,1,0,1,1,0,0,1,0,1,0,0,1,1,1,0,0],"sand":[0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"15","date":"2026-07-26","courseId":"bill-flynn-s-windham-white-18-holes","gross":83,"net":75,"scoreToPar":11,"holes":18,"scores":[7,5,2,5,7,3,4,4,4,4,5,5,5,4,4,5,5,5],"fairways":[0,0,null,1,0,null,0,0,null,1,1,1,0,null,0,0,1,0],"gir":[0,0,1,0,0,1,1,1,0,1,0,0,0,0,1,0,0,0],"putts":[1,1,1,2,2,2,2,2,2,2,2,1,2,2,1,2,2,2],"chips":[2,2,0,1,1,0,0,0,1,1,1,2,1,1,0,1,1,1],"sand":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"penalties":[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"16","date":"2026-07-30","courseId":"hidden-creek-black-blue-front-9","gross":46,"net":39,"scoreToPar":10,"holes":9,"scores":[5,7,3,6,6,4,4,6,5],"fairways":[1,0,null,1,1,0,null,1,0],"gir":[0,0,0,0,0,1,1,0,1],"putts":[2,3,1,1,3,2,3,2,3],"chips":[1,1,1,2,1,0,0,1,0],"sand":[0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99,"fairwayDistribution":{"hitPct":57.1,"missLeftPct":14.3,"missRightPct":28.6,"missShortPct":0.0,"missLongPct":0.0,"missFairwaysHitPct":0.0},"girDistribution":{"hitPct":33.3,"missShortPct":33.3,"missLeftPct":0.0,"missRightPct":11.1,"missLongPct":11.1,"missGirPct":11.1,"noChancePct":0.0}},{"id":"17","date":"2026-07-31","courseId":"butter-brook-white-18-holes","gross":87,"net":77,"scoreToPar":15,"holes":18,"scores":[6,4,4,6,3,6,5,5,6,5,3,5,5,3,5,6,5,5],"fairways":[1,0,null,1,null,1,1,null,0,1,null,1,1,null,1,0,1,1],"gir":[0,1,1,0,1,0,1,0,0,0,1,1,0,1,0,0,0,0],"putts":[2,2,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2],"chips":[1,0,0,1,0,1,0,2,1,1,0,1,1,0,1,1,0,1],"sand":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"18","date":"2026-08-02","courseId":"butter-brook-white-18-holes","gross":79,"net":69,"scoreToPar":7,"holes":18,"scores":[6,4,3,5,4,4,5,4,6,4,3,5,4,4,5,5,4,4],"fairways":[1,0,null,1,null,1,1,null,1,0,null,1,0,null,1,1,0,1],"gir":[1,1,1,0,0,1,1,0,0,0,0,1,0,0,0,1,1,1],"putts":[3,2,2,2,2,2,2,2,2,1,1,2,1,2,2,2,2,2],"chips":[0,0,0,1,1,0,0,1,1,1,1,1,1,1,1,1,0,0],"sand":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"19","date":"2026-08-06","courseId":"hidden-creek-black-blue-front-9","gross":43,"net":36,"scoreToPar":7,"holes":9,"scores":[6,4,3,7,4,5,4,6,4],"fairways":[0,1,null,0,0,1,null,0,0],"gir":[0,1,0,0,1,0,0,0,1],"putts":[3,2,1,2,2,2,2,1,2],"chips":[0,0,1,0,0,1,1,0,0],"sand":[0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99,"fairwayDistribution":{"hitPct":28.6,"missLeftPct":0.0,"missRightPct":71.4,"missShortPct":0.0,"missLongPct":0.0,"missFairwaysHitPct":0.0},"girDistribution":{"hitPct":33.3,"missShortPct":44.4,"missLeftPct":0.0,"missRightPct":0.0,"missLongPct":0.0,"missGirPct":22.2,"noChancePct":0.0}},{"id":"20","date":"2026-08-08","courseId":"campbell-s-scot-highlands-white-18-holes","gross":81,"net":72,"scoreToPar":10,"holes":18,"scores":[4,6,3,5,7,5,4,4,5,4,4,5,5,5,3,4,3,5],"fairways":[1,1,null,1,1,1,null,1,1,1,null,0,1,0,null,1,0,0],"gir":[1,0,0,0,0,0,1,1,0,1,0,0,1,1,1,1,1,1],"putts":[2,2,1,2,2,2,3,2,2,2,2,2,3,3,2,2,1,2],"chips":[0,0,1,1,1,1,0,0,0,0,1,0,0,0,0,0,0,1],"sand":[0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99,"fairwayDistribution":{"hitPct":71.4,"missLeftPct":14.3,"missRightPct":14.3,"missShortPct":0.0,"missLongPct":0.0,"missFairwaysHitPct":0.0},"girDistribution":{"hitPct":55.6,"missShortPct":27.8,"missLeftPct":0.0,"missRightPct":5.6,"missLongPct":0.0,"missGirPct":11.1,"noChancePct":0.0}},{"id":"21","date":"2026-08-09","courseId":"four-oaks-white-18-holes","gross":81,"net":72,"scoreToPar":11,"holes":18,"scores":[4,6,5,3,5,4,5,5,3,5,5,4,4,4,5,5,4,5],"fairways":[0,0,1,null,1,1,1,1,null,0,1,null,1,0,null,1,1,1],"gir":[1,0,0,1,1,1,0,0,1,0,0,0,1,1,0,0,0,0],"putts":[2,2,1,2,2,2,2,2,2,2,2,2,2,2,3,2,1,2],"chips":[0,1,1,0,0,0,1,1,0,0,0,0,0,0,1,1,1,1],"sand":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"30","date":"2026-08-14","courseId":"atkinson-country-club-white-18-holes","gross":82,"net":69,"scoreToPar":10,"holes":18,"scores":[4,5,4,5,5,5,4,3,5,4,4,7,4,3,5,7,4,4],"fairways":[0,1,null,1,0,0,1,null,1,0,null,0,1,null,1,0,0,1],"gir":[1,1,0,0,0,0,1,0,0,1,0,0,1,0,0,0,1,1],"putts":[2,2,1,1,2,1,2,1,2,2,2,2,2,1,2,3,2,2],"chips":[0,0,1,1,0,1,0,1,1,0,1,0,0,1,1,0,0,0],"sand":[0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99},{"id":"27","date":"2026-08-16","courseId":"four-oaks-white-18-holes","gross":75,"net":66,"scoreToPar":5,"holes":18,"scores":[4,5,3,5,5,4,4,5,4,4,4,3,4,5,3,4,3,6],"fairways":[0,1,0,null,0,1,1,1,null,0,1,null,1,1,null,1,1,1],"gir":[0,0,0,0,0,0,1,0,0,0,0,1,1,1,1,0,0,0],"putts":[1,1,0,2,1,1,2,2,2,1,1,2,2,3,2,1,0,1],"chips":[1,2,1,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1],"sand":[0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"source":"18Birdies","importConfidence":0.99},{"id":"28","date":"2026-08-23","courseId":"four-oaks-white-18-holes","gross":78,"net":69,"scoreToPar":8,"holes":18,"scores":[4,6,5,3,5,5,5,4,3,5,4,3,5,4,3,4,5,5],"fairways":[0,0,0,null,0,0,1,1,null,1,1,null,0,1,null,1,1,0],"gir":[1,0,0,1,1,0,0,1,0,0,1,1,0,1,1,1,0,0],"putts":[2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,1,2],"chips":[0,0,1,0,1,0,0,0,1,1,0,0,0,0,0,0,1,1],"sand":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"penalties":[0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":1.0},{"id":"29","date":"2026-08-27","courseId":"hidden-creek-black-blue-front-9","gross":48,"net":42,"scoreToPar":12,"holes":9,"scores":[5,6,4,8,5,6,3,7,4],"fairways":[0,0,null,0,0,0,null,0,0],"gir":[0,0,0,0,1,0,1,0,1],"putts":[2,3,2,3,3,2,2,3,2],"chips":[0,0,1,0,0,1,0,1,0],"sand":[1,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99,"fairwayDistribution":{"hitPct":0.0,"missLeftPct":42.9,"missRightPct":57.1,"missShortPct":0.0,"missLongPct":0.0,"missFairwaysHitPct":0.0},"girDistribution":{"hitPct":33.3,"missShortPct":55.6,"missLeftPct":0.0,"missRightPct":0.0,"missLongPct":0.0,"missGirPct":11.1,"noChancePct":0.0}},{"id":"34","date":"2026-08-28","courseId":"campbell-s-scot-highlands-white-18-holes","gross":78,"net":70,"scoreToPar":7,"holes":18,"scores":[5,6,3,5,6,5,4,4,4,4,3,5,4,4,3,4,4,5],"fairways":[0,1,null,1,0,1,null,0,1,0,null,1,1,1,null,1,1,1],"gir":[1,0,1,1,0,0,0,1,1,1,1,1,1,1,1,1,1,1],"putts":[3,2,2,3,2,2,2,2,2,2,2,3,2,2,2,2,2,2],"chips":[0,1,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0],"sand":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"penalties":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"source":"18Birdies","importConfidence":0.99,"fairwayDistribution":{"hitPct":71.4,"missLeftPct":21.4,"missRightPct":7.1,"missShortPct":0.0,"missLongPct":0.0,"missFairwaysHitPct":0.0},"girDistribution":{"hitPct":77.8,"missShortPct":11.1,"missLeftPct":0.0,"missRightPct":0.0,"missLongPct":5.6,"missGirPct":5.6,"noChancePct":0.0}}],"puttingDetails":[{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":1,"distance":15.0,"putts":2,"sg":-0.11},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":2,"distance":13.0,"putts":2,"sg":-0.19},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":3,"distance":17.0,"putts":2,"sg":-0.06},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":4,"distance":25.0,"putts":2,"sg":0.04},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":5,"distance":48.0,"putts":3,"sg":-0.76},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":6,"distance":19.0,"putts":3,"sg":-1.02},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":7,"distance":22.0,"putts":2,"sg":0.0},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":8,"distance":22.0,"putts":2,"sg":-0.01},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":9,"distance":21.0,"putts":2,"sg":-0.02},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":10,"distance":51.0,"putts":2,"sg":0.27},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":11,"distance":83.0,"putts":3,"sg":-0.52},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":12,"distance":20.0,"putts":2,"sg":-0.02},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":13,"distance":50.0,"putts":2,"sg":0.26},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":14,"distance":73.0,"putts":2,"sg":0.42},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":15,"distance":72.0,"putts":3,"sg":-0.58},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":16,"distance":63.0,"putts":2,"sg":0.35},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":17,"distance":29.0,"putts":2,"sg":0.09},{"date":"2026-05-25","course":"Campbell's Scot. Highlands","hole":18,"distance":69.0,"putts":2,"sg":0.4},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":1,"distance":30.0,"putts":2,"sg":0.1},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":2,"distance":32.0,"putts":3,"sg":-0.88},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":3,"distance":46.0,"putts":3,"sg":-0.77},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":4,"distance":33.0,"putts":3,"sg":-0.88},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":5,"distance":25.0,"putts":2,"sg":0.04},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":6,"distance":21.0,"putts":2,"sg":-0.02},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":7,"distance":29.0,"putts":2,"sg":0.08},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":8,"distance":5.0,"putts":2,"sg":-0.69},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":9,"distance":54.0,"putts":2,"sg":0.28},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":10,"distance":21.0,"putts":2,"sg":-0.01},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":11,"distance":33.0,"putts":2,"sg":0.12},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":12,"distance":8.0,"putts":2,"sg":-0.49},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":13,"distance":9.0,"putts":2,"sg":-0.34},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":14,"distance":49.0,"putts":2,"sg":0.25},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":15,"distance":25.0,"putts":1,"sg":1.03},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":16,"distance":37.0,"putts":3,"sg":-0.85},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":17,"distance":44.0,"putts":2,"sg":0.21},{"date":"2026-06-06","course":"Campbell's Scot. Highlands","hole":18,"distance":82.0,"putts":3,"sg":-0.52},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":1,"distance":46.0,"putts":3,"sg":-0.77},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":2,"distance":10.0,"putts":2,"sg":-0.34},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":3,"distance":33.0,"putts":2,"sg":0.12},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":4,"distance":18.0,"putts":2,"sg":-0.04},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":5,"distance":25.0,"putts":3,"sg":-0.96},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":6,"distance":33.0,"putts":2,"sg":0.12},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":7,"distance":41.0,"putts":2,"sg":0.19},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":8,"distance":73.0,"putts":3,"sg":-0.57},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":9,"distance":84.0,"putts":3,"sg":-0.51},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":10,"distance":31.0,"putts":2,"sg":0.1},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":11,"distance":48.0,"putts":2,"sg":0.24},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":12,"distance":60.0,"putts":3,"sg":-0.68},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":13,"distance":14.0,"putts":2,"sg":-0.15},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":14,"distance":55.0,"putts":2,"sg":0.29},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":15,"distance":50.0,"putts":3,"sg":-0.74},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":16,"distance":52.0,"putts":2,"sg":0.27},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":17,"distance":32.0,"putts":2,"sg":0.12},{"date":"2026-06-12","course":"Campbell's Scot. Highlands","hole":18,"distance":9.0,"putts":1,"sg":0.6},{"date":"2026-07-02","course":"Hidden Creek","hole":1,"distance":63.0,"putts":3,"sg":-0.64},{"date":"2026-07-02","course":"Hidden Creek","hole":2,"distance":40.0,"putts":2,"sg":0.18},{"date":"2026-07-02","course":"Hidden Creek","hole":3,"distance":28.0,"putts":2,"sg":0.08},{"date":"2026-07-02","course":"Hidden Creek","hole":4,"distance":45.0,"putts":2,"sg":0.22},{"date":"2026-07-02","course":"Hidden Creek","hole":5,"distance":26.0,"putts":2,"sg":0.05},{"date":"2026-07-02","course":"Hidden Creek","hole":6,"distance":51.0,"putts":2,"sg":0.26},{"date":"2026-07-02","course":"Hidden Creek","hole":7,"distance":15.0,"putts":2,"sg":-0.11},{"date":"2026-07-02","course":"Hidden Creek","hole":8,"distance":22.0,"putts":2,"sg":-0.01},{"date":"2026-07-02","course":"Hidden Creek","hole":9,"distance":16.0,"putts":2,"sg":-0.09},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":1,"distance":28.0,"putts":2,"sg":0.08},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":2,"distance":4.0,"putts":3,"sg":-0.88},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":3,"distance":21.0,"putts":2,"sg":-0.01},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":4,"distance":11.0,"putts":1,"sg":0.71},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":5,"distance":15.0,"putts":2,"sg":-0.11},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":6,"distance":3.0,"putts":1,"sg":0.1},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":7,"distance":6.0,"putts":1,"sg":0.31},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":8,"distance":25.0,"putts":3,"sg":-0.96},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":9,"distance":32.0,"putts":2,"sg":0.11},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":10,"distance":20.0,"putts":2,"sg":-0.02},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":11,"distance":40.0,"putts":2,"sg":0.17},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":12,"distance":61.0,"putts":3,"sg":-0.65},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":13,"distance":16.0,"putts":2,"sg":-0.09},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":14,"distance":9.0,"putts":2,"sg":-0.34},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":15,"distance":38.0,"putts":3,"sg":-0.84},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":16,"distance":27.0,"putts":3,"sg":-0.95},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":17,"distance":28.0,"putts":2,"sg":0.08},{"date":"2026-07-03","course":"Campbell's Scot. Highlands","hole":18,"distance":34.0,"putts":3,"sg":-0.87},{"date":"2026-07-30","course":"Hidden Creek","hole":1,"distance":28.0,"putts":2,"sg":0.08},{"date":"2026-07-30","course":"Hidden Creek","hole":2,"distance":32.0,"putts":3,"sg":-0.89},{"date":"2026-07-30","course":"Hidden Creek","hole":3,"distance":3.0,"putts":1,"sg":0.12},{"date":"2026-07-30","course":"Hidden Creek","hole":4,"distance":39.0,"putts":1,"sg":1.17},{"date":"2026-07-30","course":"Hidden Creek","hole":5,"distance":28.0,"putts":3,"sg":-0.93},{"date":"2026-07-30","course":"Hidden Creek","hole":6,"distance":18.0,"putts":2,"sg":-0.06},{"date":"2026-07-30","course":"Hidden Creek","hole":7,"distance":53.0,"putts":3,"sg":-0.72},{"date":"2026-07-30","course":"Hidden Creek","hole":8,"distance":16.0,"putts":2,"sg":-0.09},{"date":"2026-07-30","course":"Hidden Creek","hole":9,"distance":58.0,"putts":3,"sg":-0.69},{"date":"2026-08-06","course":"Hidden Creek","hole":1,"distance":26.0,"putts":3,"sg":-0.96},{"date":"2026-08-06","course":"Hidden Creek","hole":2,"distance":32.0,"putts":2,"sg":0.12},{"date":"2026-08-06","course":"Hidden Creek","hole":3,"distance":4.0,"putts":1,"sg":0.12},{"date":"2026-08-06","course":"Hidden Creek","hole":4,"distance":20.0,"putts":2,"sg":-0.02},{"date":"2026-08-06","course":"Hidden Creek","hole":5,"distance":18.0,"putts":2,"sg":-0.04},{"date":"2026-08-06","course":"Hidden Creek","hole":6,"distance":18.0,"putts":2,"sg":-0.04},{"date":"2026-08-06","course":"Hidden Creek","hole":7,"distance":21.0,"putts":2,"sg":-0.02},{"date":"2026-08-06","course":"Hidden Creek","hole":8,"distance":15.0,"putts":1,"sg":0.89},{"date":"2026-08-06","course":"Hidden Creek","hole":9,"distance":13.0,"putts":2,"sg":-0.19},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":1,"distance":25.0,"putts":2,"sg":0.03},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":2,"distance":8.0,"putts":2,"sg":-0.4},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":3,"distance":9.0,"putts":1,"sg":0.66},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":4,"distance":22.0,"putts":2,"sg":-0.01},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":5,"distance":13.0,"putts":2,"sg":-0.19},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":6,"distance":12.0,"putts":2,"sg":-0.19},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":7,"distance":59.0,"putts":3,"sg":-0.69},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":8,"distance":54.0,"putts":2,"sg":0.28},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":9,"distance":39.0,"putts":2,"sg":0.17},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":10,"distance":32.0,"putts":2,"sg":0.11},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":11,"distance":31.0,"putts":2,"sg":0.11},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":12,"distance":11.0,"putts":2,"sg":-0.29},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":13,"distance":49.0,"putts":3,"sg":-0.75},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":14,"distance":86.0,"putts":3,"sg":-0.49},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":15,"distance":27.0,"putts":2,"sg":0.07},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":16,"distance":47.0,"putts":2,"sg":0.24},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":17,"distance":13.0,"putts":1,"sg":0.81},{"date":"2026-08-08","course":"Campbell's Scot. Highlands","hole":18,"distance":31.0,"putts":2,"sg":0.11},{"date":"2026-08-09","course":"Four Oaks","hole":1,"distance":17.0,"putts":2,"sg":-0.09},{"date":"2026-08-09","course":"Four Oaks","hole":2,"distance":11.0,"putts":2,"sg":-0.29},{"date":"2026-08-09","course":"Four Oaks","hole":3,"distance":11.0,"putts":1,"sg":0.71},{"date":"2026-08-09","course":"Four Oaks","hole":4,"distance":24.0,"putts":2,"sg":0.03},{"date":"2026-08-09","course":"Four Oaks","hole":5,"distance":17.0,"putts":2,"sg":-0.09},{"date":"2026-08-09","course":"Four Oaks","hole":6,"distance":24.0,"putts":2,"sg":0.02},{"date":"2026-08-09","course":"Four Oaks","hole":7,"distance":13.0,"putts":2,"sg":-0.15},{"date":"2026-08-09","course":"Four Oaks","hole":8,"distance":16.0,"putts":2,"sg":-0.09},{"date":"2026-08-09","course":"Four Oaks","hole":9,"distance":14.0,"putts":2,"sg":-0.11},{"date":"2026-08-09","course":"Four Oaks","hole":10,"distance":44.0,"putts":2,"sg":0.21},{"date":"2026-08-09","course":"Four Oaks","hole":11,"distance":53.0,"putts":2,"sg":0.28},{"date":"2026-08-09","course":"Four Oaks","hole":12,"distance":63.0,"putts":2,"sg":0.36},{"date":"2026-08-09","course":"Four Oaks","hole":13,"distance":13.0,"putts":2,"sg":-0.15},{"date":"2026-08-09","course":"Four Oaks","hole":14,"distance":25.0,"putts":2,"sg":0.03},{"date":"2026-08-09","course":"Four Oaks","hole":15,"distance":38.0,"putts":3,"sg":-0.84},{"date":"2026-08-09","course":"Four Oaks","hole":16,"distance":13.0,"putts":2,"sg":-0.19},{"date":"2026-08-09","course":"Four Oaks","hole":17,"distance":3.0,"putts":1,"sg":0.1},{"date":"2026-08-09","course":"Four Oaks","hole":18,"distance":15.0,"putts":2,"sg":-0.11},{"date":"2026-08-14","course":"Atkinson","hole":1,"distance":10.0,"putts":2,"sg":-0.29},{"date":"2026-08-14","course":"Atkinson","hole":2,"distance":17.0,"putts":2,"sg":-0.09},{"date":"2026-08-14","course":"Atkinson","hole":3,"distance":15.0,"putts":1,"sg":0.89},{"date":"2026-08-14","course":"Atkinson","hole":4,"distance":22.0,"putts":1,"sg":0.99},{"date":"2026-08-14","course":"Atkinson","hole":5,"distance":31.0,"putts":2,"sg":0.1},{"date":"2026-08-14","course":"Atkinson","hole":6,"distance":15.0,"putts":1,"sg":0.89},{"date":"2026-08-14","course":"Atkinson","hole":7,"distance":66.0,"putts":2,"sg":0.38},{"date":"2026-08-14","course":"Atkinson","hole":8,"distance":18.0,"putts":1,"sg":0.96},{"date":"2026-08-14","course":"Atkinson","hole":9,"distance":35.0,"putts":2,"sg":0.13},{"date":"2026-08-14","course":"Atkinson","hole":10,"distance":4.0,"putts":2,"sg":-0.88},{"date":"2026-08-14","course":"Atkinson","hole":11,"distance":16.0,"putts":2,"sg":-0.11},{"date":"2026-08-14","course":"Atkinson","hole":12,"distance":26.0,"putts":2,"sg":0.04},{"date":"2026-08-14","course":"Atkinson","hole":13,"distance":11.0,"putts":2,"sg":-0.29},{"date":"2026-08-14","course":"Atkinson","hole":14,"distance":4.0,"putts":1,"sg":0.21},{"date":"2026-08-14","course":"Atkinson","hole":15,"distance":13.0,"putts":2,"sg":-0.15},{"date":"2026-08-14","course":"Atkinson","hole":16,"distance":61.0,"putts":3,"sg":-0.65},{"date":"2026-08-14","course":"Atkinson","hole":17,"distance":47.0,"putts":2,"sg":0.24},{"date":"2026-08-14","course":"Atkinson","hole":18,"distance":43.0,"putts":2,"sg":0.2},{"date":"2026-08-16","course":"Four Oaks","hole":1,"distance":16.0,"putts":1,"sg":0.89},{"date":"2026-08-16","course":"Four Oaks","hole":2,"distance":4.0,"putts":1,"sg":0.21},{"date":"2026-08-16","course":"Four Oaks","hole":4,"distance":22.0,"putts":2,"sg":0.0},{"date":"2026-08-16","course":"Four Oaks","hole":5,"distance":2.0,"putts":1,"sg":0.1},{"date":"2026-08-16","course":"Four Oaks","hole":6,"distance":21.0,"putts":1,"sg":0.98},{"date":"2026-08-16","course":"Four Oaks","hole":7,"distance":51.0,"putts":2,"sg":0.27},{"date":"2026-08-16","course":"Four Oaks","hole":8,"distance":31.0,"putts":2,"sg":0.1},{"date":"2026-08-16","course":"Four Oaks","hole":9,"distance":13.0,"putts":2,"sg":-0.19},{"date":"2026-08-16","course":"Four Oaks","hole":10,"distance":21.0,"putts":1,"sg":0.98},{"date":"2026-08-16","course":"Four Oaks","hole":11,"distance":2.0,"putts":1,"sg":0.08},{"date":"2026-08-16","course":"Four Oaks","hole":12,"distance":19.0,"putts":2,"sg":-0.04},{"date":"2026-08-16","course":"Four Oaks","hole":13,"distance":17.0,"putts":2,"sg":-0.06},{"date":"2026-08-16","course":"Four Oaks","hole":14,"distance":36.0,"putts":3,"sg":-0.85},{"date":"2026-08-16","course":"Four Oaks","hole":15,"distance":36.0,"putts":2,"sg":0.14},{"date":"2026-08-16","course":"Four Oaks","hole":16,"distance":4.0,"putts":1,"sg":0.12},{"date":"2026-08-16","course":"Four Oaks","hole":18,"distance":18.0,"putts":1,"sg":0.96},{"date":"2026-08-27","course":"Hidden Creek","hole":1,"distance":17.0,"putts":2,"sg":-0.09},{"date":"2026-08-27","course":"Hidden Creek","hole":2,"distance":37.0,"putts":3,"sg":-0.85},{"date":"2026-08-27","course":"Hidden Creek","hole":3,"distance":8.0,"putts":2,"sg":-0.4},{"date":"2026-08-27","course":"Hidden Creek","hole":4,"distance":34.0,"putts":3,"sg":-0.87},{"date":"2026-08-27","course":"Hidden Creek","hole":5,"distance":99.0,"putts":3,"sg":-0.47},{"date":"2026-08-27","course":"Hidden Creek","hole":6,"distance":10.0,"putts":2,"sg":-0.34},{"date":"2026-08-27","course":"Hidden Creek","hole":7,"distance":29.0,"putts":2,"sg":0.09},{"date":"2026-08-27","course":"Hidden Creek","hole":8,"distance":64.0,"putts":3,"sg":-0.63},{"date":"2026-08-27","course":"Hidden Creek","hole":9,"distance":37.0,"putts":2,"sg":0.15},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":1,"distance":55.0,"putts":3,"sg":-0.71},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":2,"distance":23.0,"putts":2,"sg":0.02},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":3,"distance":25.0,"putts":2,"sg":0.03},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":4,"distance":52.0,"putts":3,"sg":-0.73},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":5,"distance":5.0,"putts":2,"sg":-0.69},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":6,"distance":47.0,"putts":2,"sg":0.24},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":7,"distance":23.0,"putts":2,"sg":0.0},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":8,"distance":24.0,"putts":2,"sg":0.02},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":9,"distance":20.0,"putts":2,"sg":-0.02},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":10,"distance":30.0,"putts":2,"sg":0.1},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":11,"distance":30.0,"putts":2,"sg":0.1},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":12,"distance":63.0,"putts":3,"sg":-0.64},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":13,"distance":20.0,"putts":2,"sg":-0.02},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":14,"distance":32.0,"putts":2,"sg":0.11},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":15,"distance":38.0,"putts":2,"sg":0.16},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":16,"distance":36.0,"putts":2,"sg":0.15},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":17,"distance":16.0,"putts":2,"sg":-0.09},{"date":"2026-08-28","course":"Campbell's Scot. Highlands","hole":18,"distance":29.0,"putts":2,"sg":0.09}],"events":[{"date":"2026-08-16","course":"Four Oaks","hole":3,"type":"chip_in_birdie","value":1},{"date":"2026-08-16","course":"Four Oaks","hole":17,"type":"chip_in_birdie","value":1}],"clubStats":[{"club":"Driver","distance":211},{"club":"3W","distance":187},{"club":"5W","distance":164},{"club":"7W","distance":154},{"club":"4 Hybrid","distance":160},{"club":"6i","distance":134},{"club":"7i","distance":169},{"club":"8i","distance":134},{"club":"PW 41°","distance":112},{"club":"GW 47°","distance":111},{"club":"SW 54°","distance":87},{"club":"LW 60°","distance":52}]};
 
 let state = {view:'pregame', selectedCourseId:'four-oaks-white-18-holes', roundStat:'score', roundFilter:'18', selectedRoundId:null, gameTab:'overview', puttingCourse:'all'};
@@ -287,20 +336,51 @@ function missBar(label,value,tone='neutral'){
   if(value==null)return '';
   return `<div class="miss-row ${tone}"><div class="miss-label">${label}</div><div class="miss-track"><div class="miss-fill" style="width:${Math.max(0,Math.min(100,value))}%"></div></div><div class="miss-value">${value.toFixed(0)}%</div></div>`;
 }
+
+function weightedDistributionAll(key){
+  const rs=db.rounds.filter(r=>r[key]);
+  if(!rs.length)return null;
+  const keys=key==='fairwayDistribution'
+    ?['hitPct','missLeftPct','missRightPct','missShortPct','missLongPct','missFairwaysHitPct']
+    :['hitPct','missShortPct','missLeftPct','missRightPct','missLongPct','missGirPct','noChancePct'];
+  const totals=Object.fromEntries(keys.map(k=>[k,0]));
+  let totalW=0;
+  rs.forEach(r=>{
+    const w=key==='fairwayDistribution'?(r.fairways||[]).filter(v=>v!=null).length:(r.gir||[]).filter(v=>v!=null).length;
+    if(!w)return;
+    totalW+=w;
+    keys.forEach(k=>totals[k]+=(r[key][k]||0)*w);
+  });
+  if(!totalW)return null;
+  keys.forEach(k=>totals[k]/=totalW);
+  totals.rounds=rs.length;
+  return totals;
+}
+function directionGraphic(title,d,isGir=false){
+  if(!d)return `<div class="direction-card"><div class="direction-title">${title}</div><div class="pregame-no-data">No directional data yet.</div></div>`;
+  const top=isGir?(d.missLongPct||0):(d.missLongPct||0);
+  const bottom=isGir?(d.missShortPct||0):(d.missShortPct||0);
+  const left=d.missLeftPct||0,right=d.missRightPct||0,hit=d.hitPct||0;
+  const wedge=(cls,v)=>v>0?`<div class="dir-wedge ${cls}" style="opacity:${Math.max(.16,Math.min(.75,v/45))}"></div>`:'';
+  return `<div class="direction-card"><div class="direction-title">${title}</div><div class="direction-sub">${d.rounds} round${d.rounds===1?'':'s'}</div>
+    <div class="direction-viz">
+      ${wedge('top',top)}${wedge('right',right)}${wedge('bottom',bottom)}${wedge('left',left)}
+      <div class="direction-ring"></div>
+      <div class="direction-center"><div class="check">✓</div><div class="pct">${hit.toFixed(0)}%</div></div>
+      <div class="dir-label dir-top"><strong>${top.toFixed(0)}%</strong>${isGir?'Long':'Long'}</div>
+      <div class="dir-label dir-right"><strong>${right.toFixed(0)}%</strong>Right</div>
+      <div class="dir-label dir-bottom"><strong>${bottom.toFixed(0)}%</strong>${isGir?'Short':'Short'}</div>
+      <div class="dir-label dir-left"><strong>${left.toFixed(0)}%</strong>Left</div>
+    </div></div>`;
+}
 function pregameTendencies(c){
   const p=puttingForCourse(c);
   const fw=weightedDistribution(c.id,'fairwayDistribution'), gir=weightedDistribution(c.id,'girDistribution');
-  const fwHtml=fw
-    ? `${missBar('Hit',fw.hitPct,'good')}${missBar('Left',fw.missLeftPct,'warn')}${missBar('Right',fw.missRightPct,'warn')}`
-    : `<div class="pregame-no-data">No directional fairway data yet.</div>`;
-  const girHtml=gir
-    ? `${missBar('GIR',gir.hitPct,'good')}${missBar('Short',gir.missShortPct,'bad')}${missBar('Left',gir.missLeftPct,'warn')}${missBar('Right',gir.missRightPct,'warn')}${missBar('Long',gir.missLongPct,'warn')}${missBar('Other',gir.missGirPct,'neutral')}`
-    : `<div class="pregame-no-data">No directional approach data yet.</div>`;
-  return `<div class="section-head"><div><div class="eyebrow">COURSE TENDENCIES</div><h2>Putting & misses</h2></div></div>
-    <div class="tendency-grid">
-      <div class="tendency-card" style="grid-column:1/-1"><div class="tendency-title">Putting by starting distance · ${p.length} greens</div>${p.length?puttingOutcomeGrid(p):'<div class="pregame-no-data">No detailed putting data for this course yet.</div>'}</div>
-      <div class="tendency-card"><div class="tendency-title">Tee-shot miss pattern${fw?` · ${fw.rounds} round${fw.rounds===1?'':'s'}`:''}</div>${fwHtml}</div>
-      <div class="tendency-card"><div class="tendency-title">Approach miss pattern${gir?` · ${gir.rounds} round${gir.rounds===1?'':'s'}`:''}</div>${girHtml}</div>
+  return `<div class="section-head"><div><div class="eyebrow">COURSE TENDENCIES</div><h2>Putting & ball striking</h2></div></div>
+    <div class="tendency-card" style="margin-bottom:12px"><div class="tendency-title">Putting by starting distance · ${p.length} greens</div>${p.length?puttingOutcomeGrid(p):'<div class="pregame-no-data">No detailed putting data for this course yet.</div>'}</div>
+    <div class="direction-grid">
+      ${directionGraphic('Fairways',fw,false)}
+      ${directionGraphic('Greens in regulation',gir,true)}
     </div>`;
 }
 
@@ -652,8 +732,11 @@ function heatMap(){
 function myGame(){
  const ps=playerSummary(),courses=puttingCourseOptions();
  const putLabel=state.puttingCourse==='all'?'All courses':state.puttingCourse;
+ const fwAll=weightedDistributionAll('fairwayDistribution'),girAll=weightedDistributionAll('girDistribution');
  return `<div class="section-head"><div><div class="eyebrow">PLAYER MODEL</div><h2>My Game</h2></div></div><div class="game-tabs"><button class="game-tab ${state.gameTab==='overview'?'active':''}" data-game-tab="overview">Overview</button><button class="game-tab ${state.gameTab==='putting'?'active':''}" data-game-tab="putting">Putting</button></div>
- ${state.gameTab==='overview'?`<div class="grid two"><div class="card"><div class="metric-label">18-hole average</div><div class="metric">${ps.avgScore?.toFixed(1)}</div></div><div class="card"><div class="metric-label">Fairways</div><div class="metric">${ps.fw}%</div></div><div class="card"><div class="metric-label">GIR</div><div class="metric">${ps.gir}%</div></div><div class="card"><div class="metric-label">Putts / round</div><div class="metric">${ps.putts?.toFixed(1)}</div></div></div><div class="section-head"><div><div class="eyebrow">CLUB MEMORY</div><h2>On-course distances</h2></div></div><div class="card">${db.clubStats.map(x=>`<div class="round-row"><div><strong>${x.club}</strong></div><div class="score-big">${x.distance}</div><div class="muted">yds</div></div>`).join('')}</div>`:
+ ${state.gameTab==='overview'?`<div class="grid two"><div class="card"><div class="metric-label">18-hole average</div><div class="metric">${ps.avgScore?.toFixed(1)}</div></div><div class="card"><div class="metric-label">Fairways</div><div class="metric">${ps.fw}%</div></div><div class="card"><div class="metric-label">GIR</div><div class="metric">${ps.gir}%</div></div><div class="card"><div class="metric-label">Putts / round</div><div class="metric">${ps.putts?.toFixed(1)}</div></div></div>
+ <div class="mygame-accuracy"><div class="section-head"><div><div class="eyebrow">SHOT PATTERNS</div><h2>Fairways & GIR</h2></div></div><div class="direction-grid">${directionGraphic('Fairways',fwAll,false)}${directionGraphic('Greens in regulation',girAll,true)}</div></div>
+ <div class="section-head"><div><div class="eyebrow">CLUB MEMORY</div><h2>On-course distances</h2></div></div><div class="card">${db.clubStats.map(x=>`<div class="round-row"><div><strong>${x.club}</strong></div><div class="score-big">${x.distance}</div><div class="muted">yds</div></div>`).join('')}</div>`:
  `<div class="section-head"><div><div class="eyebrow">PUTTING ANALYSIS</div><h2>${putLabel}</h2></div></div>
   <div class="putting-course-filter">
     <button class="putting-course ${state.puttingCourse==='all'?'active':''}" data-put-course="all">All courses</button>
@@ -682,16 +765,121 @@ function render(){
 window.setView = v => {state.view=v; render();};
 document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
 
-const dlg=document.getElementById('importDialog'), fileInput=document.getElementById('fileInput'), fileList=document.getElementById('fileList');
-document.getElementById('importBtn').onclick=()=>dlg.showModal();
-fileInput.addEventListener('change',()=>{fileList.innerHTML=[...fileInput.files].map(f=>`<div class="file-item">${f.name} · ${(f.size/1024/1024).toFixed(1)} MB</div>`).join('')});
-document.getElementById('saveImport').onclick=()=>{
-  const files=[...fileInput.files]; if(!files.length){alert('Choose at least one screenshot.');return;}
-  const imports=JSON.parse(localStorage.getItem('roundiq_imports')||'[]');
-  imports.push({createdAt:new Date().toISOString(),source:document.getElementById('sourceSelect').value,note:document.getElementById('importNote').value,files:files.map(f=>({name:f.name,size:f.size,type:f.type}))});
-  localStorage.setItem('roundiq_imports',JSON.stringify(imports)); dlg.close(); fileInput.value='';fileList.innerHTML='';document.getElementById('importNote').value=''; alert('Import staged locally. It is not yet written into the canonical GolfIQ database.');
+
+const dlg=document.getElementById('importDialog');
+const fileInput=document.getElementById('fileInput');
+const fileList=document.getElementById('fileList');
+const importStatus=document.getElementById('importStatus');
+const uploadStep=document.getElementById('importStepUpload');
+const reviewStep=document.getElementById('importStepReview');
+const importReview=document.getElementById('importReview');
+
+document.getElementById('importBtn').onclick=()=>{
+  pendingImport=null;
+  uploadStep.style.display='';
+  reviewStep.style.display='none';
+  importStatus.textContent='';
+  importStatus.className='import-status';
+  dlg.showModal();
+};
+document.getElementById('closeImport').onclick=()=>dlg.close();
+document.getElementById('backImport').onclick=()=>{
+  reviewStep.style.display='none';
+  uploadStep.style.display='';
+};
+fileInput.addEventListener('change',()=>{
+  fileList.innerHTML=[...fileInput.files].map(f=>`<div class="file-item">${f.name} · ${(f.size/1024/1024).toFixed(1)} MB</div>`).join('');
+});
+
+async function compressImage(file,maxDim=1600,quality=.78){
+  const bitmap=await createImageBitmap(file);
+  const scale=Math.min(1,maxDim/Math.max(bitmap.width,bitmap.height));
+  const w=Math.max(1,Math.round(bitmap.width*scale)),h=Math.max(1,Math.round(bitmap.height*scale));
+  const canvas=document.createElement('canvas'); canvas.width=w;canvas.height=h;
+  canvas.getContext('2d').drawImage(bitmap,0,0,w,h);
+  const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',quality));
+  const buf=await blob.arrayBuffer();
+  let binary=''; const bytes=new Uint8Array(buf),chunk=0x8000;
+  for(let i=0;i<bytes.length;i+=chunk) binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+chunk,bytes.length)));
+  return {name:file.name,type:'image/jpeg',data:btoa(binary)};
+}
+function val(v){return v===null||v===undefined||v===''?'—':v}
+function boolMark(v){return v===true||v===1?'✓':v===false||v===0?'✕':'—'}
+function reviewHtml(x){
+  const r=x.round||x;
+  const holes=r.holes_detail||r.hole_details||[];
+  const warnings=[...(x.warnings||[]),...(r.warnings||[])];
+  return `
+    ${warnings.map(w=>`<div class="import-warning">${w}</div>`).join('')}
+    <div class="import-summary">
+      <div class="import-kpi"><div class="k">Course</div><div class="v">${val(r.course_name)}</div></div>
+      <div class="import-kpi"><div class="k">Date</div><div class="v">${val(r.date)}</div></div>
+      <div class="import-kpi"><div class="k">Score</div><div class="v">${val(r.gross_score)}</div></div>
+      <div class="import-kpi"><div class="k">Putts</div><div class="v">${val(r.total_putts)}</div></div>
+      <div class="import-kpi"><div class="k">Fairways</div><div class="v">${val(r.fairways_hit)}</div></div>
+      <div class="import-kpi"><div class="k">GIR</div><div class="v">${val(r.gir)}</div></div>
+    </div>
+    ${holes.length?`<div style="overflow-x:auto"><table class="import-hole-table"><thead><tr><th>Hole</th><th>Score</th><th>FH</th><th>GIR</th><th>Putts</th><th>1st putt</th></tr></thead><tbody>${holes.map(h=>`<tr><td>${val(h.hole)}</td><td>${val(h.score)}</td><td>${boolMark(h.fairway_hit)}</td><td>${boolMark(h.gir)}</td><td>${val(h.putts)}</td><td>${h.first_putt_distance_ft!=null?val(h.first_putt_distance_ft)+'′':'—'}</td></tr>`).join('')}</tbody></table></div>`:''}
+    <div class="import-confidence">Extraction confidence: ${Math.round(100*(x.confidence??r.confidence??0))}%</div>`;
+}
+async function callImportFunction(payload){
+  const res=await fetch(`${SUPABASE_URL}/functions/v1/golfiq-import`,{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization':`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      'apikey':SUPABASE_PUBLISHABLE_KEY
+    },
+    body:JSON.stringify(payload)
+  });
+  const body=await res.json().catch(()=>({error:'Invalid server response'}));
+  if(!res.ok) throw new Error(body.error||body.message||`Import failed (${res.status})`);
+  return body;
+}
+document.getElementById('analyzeImport').onclick=async()=>{
+  const files=[...fileInput.files];
+  if(!files.length){alert('Choose at least one screenshot.');return;}
+  const btn=document.getElementById('analyzeImport');
+  try{
+    btn.disabled=true;btn.textContent='Analyzing…';
+    importStatus.className='import-status';importStatus.textContent='Preparing screenshots…';
+    const images=[];
+    for(let i=0;i<files.length;i++){
+      importStatus.textContent=`Preparing screenshot ${i+1} of ${files.length}…`;
+      images.push(await compressImage(files[i]));
+    }
+    importStatus.textContent='Reading round data…';
+    const result=await callImportFunction({
+      action:'parse',
+      source:document.getElementById('sourceSelect').value,
+      note:document.getElementById('importNote').value,
+      images
+    });
+    pendingImport=result;
+    importReview.innerHTML=reviewHtml(result);
+    uploadStep.style.display='none';reviewStep.style.display='';
+  }catch(e){
+    importStatus.className='import-status error';
+    importStatus.textContent=e.message;
+  }finally{
+    btn.disabled=false;btn.textContent='Analyze Screenshots';
+  }
+};
+document.getElementById('saveImport').onclick=async()=>{
+  if(!pendingImport)return;
+  const btn=document.getElementById('saveImport');
+  try{
+    btn.disabled=true;btn.textContent='Saving…';
+    const result=await callImportFunction({action:'save',parsed:pendingImport});
+    btn.textContent='Saved ✓';
+    setTimeout(()=>{dlg.close();location.reload()},500);
+  }catch(e){
+    alert(e.message);
+    btn.disabled=false;btn.textContent='Save Round';
+  }
 };
 render();
+
 
 </script>
 </body>
