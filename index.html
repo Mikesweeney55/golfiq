@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfIQ v11.1</title>
+  <title>GolfIQ v11.2</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -302,6 +302,50 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
 .dialog-actions.split{justify-content:space-between;gap:10px}
 .dialog-actions-right{display:flex;gap:8px;margin-left:auto}
 
+
+.global-course-bar{
+  position:sticky;top:0;z-index:25;
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,360px);
+  align-items:center;gap:14px;
+  margin:-8px 0 22px;padding:10px 12px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;
+  background:rgba(12,24,19,.94);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 10px 28px rgba(0,0,0,.18);
+}
+.global-course-label{min-width:0;display:flex;flex-direction:column;gap:1px}
+.global-course-label strong{
+  display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:13px;line-height:1.25
+}
+.global-course-select-wrap{position:relative}
+.global-course-select{
+  width:100%;appearance:none;-webkit-appearance:none;
+  border:1px solid rgba(184,234,104,.28);
+  background:#13231c;color:var(--text);
+  border-radius:12px;padding:10px 36px 10px 12px;
+  font:inherit;font-size:12px;font-weight:850;outline:none
+}
+.global-course-select:focus{
+  border-color:rgba(184,234,104,.62);
+  box-shadow:0 0 0 2px rgba(184,234,104,.08)
+}
+.global-course-select-wrap::after{
+  content:'⌄';position:absolute;right:12px;top:50%;transform:translateY(-55%);
+  color:var(--accent);font-size:18px;font-weight:900;pointer-events:none
+}
+.scope-toggle{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 12px}
+.scope-toggle .filter-tab{flex:0 0 auto}
+@media(max-width:640px){
+  .global-course-bar{
+    grid-template-columns:1fr;gap:7px;
+    margin:-6px 0 18px;padding:9px 10px
+  }
+  .global-course-label{display:none}
+  .global-course-select{font-size:12px;padding-top:9px;padding-bottom:9px}
+}
+
 </style>
 </head>
 <body>
@@ -309,7 +353,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div class="topbar-left">
         <div class="brand-title">GolfIQ</div>
-        <div class="brand-meta"><span>v11.1</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
+        <div class="brand-meta"><span>v11.2</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
       </div>
 
       <div class="giq-logo" aria-label="GIQ">
@@ -320,6 +364,18 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
         <button id="importBtn" class="button secondary">Import Round</button>
       </div>
     </header>
+
+    <div class="global-course-bar">
+      <div class="global-course-label">
+        <span class="eyebrow">COURSE</span>
+        <strong id="globalCourseName">Loading…</strong>
+      </div>
+      <div class="global-course-select-wrap">
+        <select id="globalCourseSelect" class="global-course-select" disabled>
+          <option>Loading courses…</option>
+        </select>
+      </div>
+    </div>
 
     <main id="app"></main>
 
@@ -421,7 +477,7 @@ let pendingImport=null;
 
 const db = {player:{id:1,name:"Mike S.",handicap:null},courses:[],rounds:[],puttingDetails:[],clubStats:[]};
 
-let state = {view:'pregame', selectedCourseId:'four-oaks-white-18-holes', roundStat:'score', roundFilter:'18', roundCourseId:'all', selectedRoundId:null, gameCourseId:'all', gameRoundLimit:'all', puttingCourse:'all', pregameChats:{}, chatBusy:false};
+let state = {view:'pregame', selectedCourseId:'four-oaks-white-18-holes', roundStat:'score', roundFilter:'18', roundCourseId:'four-oaks-white-18-holes', selectedRoundId:null, gameCourseId:'four-oaks-white-18-holes', gameRoundLimit:'all', puttingCourse:'all', pregameChats:{}, chatBusy:false};
 const app = document.getElementById('app');
 const course = id => db.courses.find(c=>c.id===id);
 const roundsFor = id => db.rounds.filter(r=>r.courseId===id).sort((a,b)=>b.date.localeCompare(a.date));
@@ -662,6 +718,27 @@ function courseDropdownOptions(selectedId,includeAll=false,allLabel='All courses
   const list=sortedCourses();
   return `${includeAll?`<option value="all" ${selectedId==='all'?'selected':''}>${allLabel}</option>`:''}${list.map(c=>`<option value="${c.id}" ${selectedId===c.id?'selected':''}>${safeText(courseMenuLabel(c))}</option>`).join('')}`;
 }
+function refreshGlobalCourseSelector(){
+  const sel=document.getElementById('globalCourseSelect');
+  const label=document.getElementById('globalCourseName');
+  if(!sel)return;
+  const list=sortedCourses();
+  sel.innerHTML=list.map(c=>`<option value="${c.id}" ${c.id===state.selectedCourseId?'selected':''}>${safeText(courseMenuLabel(c))}</option>`).join('');
+  sel.disabled=!list.length;
+  const c=course(state.selectedCourseId);
+  if(label)label.textContent=c?courseMenuLabel(c):'No course selected';
+}
+function setGlobalCourse(id){
+  if(!db.courses.some(c=>c.id===id))return;
+  state.selectedCourseId=id;
+  state.gameCourseId=id;
+  state.roundCourseId=id;
+  state.selectedRoundId=null;
+  try{localStorage.setItem('golfiqSelectedCourseId',id)}catch{}
+  refreshGlobalCourseSelector();
+  render();
+}
+
 
 function holeLastRound(courseId,holeNumber){
   const c=course(courseId), r=roundsFor(courseId)[0];
@@ -896,10 +973,7 @@ function pregame(){
   const lastStats=courseRoundStats(c.id,'last'), allStats=courseRoundStats(c.id,'all');
   const pctVal=v=>v==null?'—':`${v}%`, numVal=v=>v==null?'—':v.toFixed(1);
   return `
-    <div class="section-head" style="margin-top:0"><div><div class="eyebrow">NEXT ROUND</div><h2>Choose course</h2></div></div>
-    <div class="course-dropdown-wrap"><select id="pregameCourseSelect" class="course-dropdown">${courseDropdownOptions(c.id)}</select></div>
-
-    <section class="hero" style="margin-top:14px">
+    <section class="hero" style="margin-top:0">
       <div class="hero-copy"><div class="eyebrow">TOMORROW'S PREGAME</div><h2>${c.name}</h2>
       <p class="muted">${c.tees} tees · Par ${c.par??'—'} · ${c.rating??'—'}/${c.slope??'—'} · ${rounds.length} round${rounds.length===1?'':'s'} in memory</p>
       <div class="course-stat-lines">
@@ -979,7 +1053,6 @@ function renderHoleCard(h,showPriority=false){
 function memory(){
   const c=course(state.selectedCourseId), mem=holeMemory(c.id);
   return `<div class="section-head"><div><div class="eyebrow">HOLE-BY-HOLE MEMORY</div><h2>${c.name}</h2></div></div>
-  <div class="course-dropdown-wrap"><select id="memoryCourseSelect" class="course-dropdown">${courseDropdownOptions(c.id)}</select></div>
   <div class="risk-legend"><span class="chip"><span class="risk-dot">L</span> Low risk</span><span class="chip"><span class="risk-dot" style="background:var(--warning);color:#2a2200">M</span> Medium risk</span><span class="chip"><span class="risk-dot" style="background:var(--danger);color:#fff">H</span> High risk</span></div>
   <div class="hole-grid">${mem.map(renderHoleCard).join('')}</div>`;
 }
@@ -1031,8 +1104,11 @@ function roundsView(){
  const courseChoices=db.courses.slice().sort((a,b)=>(a.baseName||a.name).localeCompare(b.baseName||b.name)||String(a.tees||'').localeCompare(String(b.tees||'')));
  const selectedCourse=state.roundCourseId==='all'?null:course(state.roundCourseId);
  return `<div class="section-head"><div><div class="eyebrow">ROUND DATABASE</div><h2>${selectedCourse?(selectedCourse.baseName||selectedCourse.name):'All courses'} · ${sorted.length} round${sorted.length===1?'':'s'}</h2></div></div>
- <div class="game-filter-label">Course</div>
- <div class="course-dropdown-wrap"><select id="roundCourseSelect" class="course-dropdown">${courseDropdownOptions(state.roundCourseId,true,'All courses')}</select></div>
+ <div class="game-filter-label">Course scope</div>
+ <div class="scope-toggle">
+   <button class="filter-tab ${state.roundCourseId==='all'?'':'active'}" data-round-scope="selected">Selected course</button>
+   <button class="filter-tab ${state.roundCourseId==='all'?'active':''}" data-round-scope="all">All courses</button>
+ </div>
  <div class="stat-tabs">${Object.entries(roundStatDefs).map(([k,x])=>`<button class="stat-tab ${k===key?'active':''}" data-round-stat="${k}">${x.short}</button>`).join('')}</div>
  <div class="filter-tabs"><button class="filter-tab ${state.roundFilter==='18'?'active':''}" data-round-filter="18">18 holes</button><button class="filter-tab ${state.roundFilter==='all'?'active':''}" data-round-filter="all">All</button><button class="filter-tab ${state.roundFilter==='9'?'active':''}" data-round-filter="9">9 holes</button></div>
  ${roundsChart(sorted,key)}
@@ -1133,7 +1209,7 @@ function heatMap(){
 }
 
 function myGame(){
- const rs=gameFilteredRounds(),ps=playerSummary(rs),courses=gameCourseOptions();
+ const rs=gameFilteredRounds(),ps=playerSummary(rs);
  const fw=weightedDistributionFromRounds(rs,'fairwayDistribution'),gir=weightedDistributionFromRounds(rs,'girDistribution');
  const selectedCourse=state.gameCourseId==='all'?null:course(state.gameCourseId);
  const scopeLabel=selectedCourse?`${selectedCourse.name}${selectedCourse.tees?` · ${selectedCourse.tees}`:''}`:'All data';
@@ -1141,7 +1217,10 @@ function myGame(){
  return `<div class="section-head"><div><div class="eyebrow">PLAYER MODEL</div><h2>My Game</h2></div></div>
  <div class="game-filter-block">
    <div class="game-filter-label">Data</div>
-   <div class="course-dropdown-wrap"><select id="gameCourseSelect" class="course-dropdown">${courseDropdownOptions(state.gameCourseId,true,'All data')}</select></div>
+   <div class="scope-toggle">
+     <button class="filter-tab ${state.gameCourseId==='all'?'':'active'}" data-game-scope="selected">Selected course</button>
+     <button class="filter-tab ${state.gameCourseId==='all'?'active':''}" data-game-scope="all">All data</button>
+   </div>
    <div class="game-filter-label">Rounds included</div>
    <div class="game-round-filter">
      ${['all','5','10','20'].map(n=>`<button class="game-round-btn ${String(state.gameRoundLimit)===n?'active':''}" data-game-rounds="${n}">${n==='all'?'All':`Last ${n}`}</button>`).join('')}
@@ -1176,11 +1255,14 @@ function selectRoundFromBar(id){
 }
 function render(){
  app.innerHTML=state.view==='pregame'?pregame():state.view==='memory'?memory():state.view==='rounds'?roundsView():myGame();
- const pc=document.getElementById('pregameCourseSelect'); if(pc)pc.addEventListener('change',()=>{state.selectedCourseId=pc.value;render()});
- const mc=document.getElementById('memoryCourseSelect'); if(mc)mc.addEventListener('change',()=>{state.selectedCourseId=mc.value;render()});
- const rc=document.getElementById('roundCourseSelect'); if(rc)rc.addEventListener('change',()=>{state.roundCourseId=rc.value;state.selectedRoundId=null;render()});
- const gc=document.getElementById('gameCourseSelect'); if(gc)gc.addEventListener('change',()=>{state.gameCourseId=gc.value;render()});
  document.querySelectorAll('[data-edit-import]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openEditRound(b.dataset.editRound)}));
+ document.querySelectorAll('[data-game-scope]').forEach(b=>b.addEventListener('click',()=>{
+   state.gameCourseId=b.dataset.gameScope==='all'?'all':state.selectedCourseId;render()
+ }));
+ document.querySelectorAll('[data-round-scope]').forEach(b=>b.addEventListener('click',()=>{
+   state.roundCourseId=b.dataset.roundScope==='all'?'all':state.selectedCourseId;state.selectedRoundId=null;render()
+ }));
+
 
  document.querySelectorAll('[data-round-stat]').forEach(b=>b.addEventListener('click',()=>{state.roundStat=b.dataset.roundStat;render()}));
  document.querySelectorAll('[data-round-filter]').forEach(b=>b.addEventListener('click',()=>{state.roundFilter=b.dataset.roundFilter;state.selectedRoundId=null;render()}));
@@ -1197,6 +1279,10 @@ function render(){
 }
 window.setView = v => {state.view=v; render();};
 document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+
+const globalCourseSelect=document.getElementById('globalCourseSelect');
+if(globalCourseSelect)globalCourseSelect.addEventListener('change',()=>setGlobalCourse(globalCourseSelect.value));
+
 
 
 
@@ -1350,12 +1436,18 @@ async function bootstrapGolfIQ(){
     db.puttingDetails=data.puttingDetails||[];
     db.clubStats=data.clubStats||[];
 
-    if(!db.courses.some(c=>c.id===state.selectedCourseId)){
+    let savedCourse=null;
+    try{savedCourse=localStorage.getItem('golfiqSelectedCourseId')}catch{}
+    if(savedCourse && db.courses.some(c=>c.id===savedCourse)){
+      state.selectedCourseId=savedCourse;
+    }else if(!db.courses.some(c=>c.id===state.selectedCourseId)){
       state.selectedCourseId=db.courses[0]?.id||null;
     }
-    if(state.gameCourseId!=='all' && !db.courses.some(c=>c.id===state.gameCourseId))state.gameCourseId='all';
-    if(state.roundCourseId!=='all' && !db.courses.some(c=>c.id===state.roundCourseId))state.roundCourseId='all';
 
+    if(state.gameCourseId!=='all')state.gameCourseId=state.selectedCourseId;
+    if(state.roundCourseId!=='all')state.roundCourseId=state.selectedCourseId;
+
+    refreshGlobalCourseSelector();
     if(pill)pill.classList.add('ok');
     if(txt)txt.textContent='Synced';
     render();
