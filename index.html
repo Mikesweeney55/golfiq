@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfIQ v10.1</title>
+  <title>GolfIQ v10.2</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -210,6 +210,10 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
 .sync-dot{width:7px;height:7px;border-radius:50%;background:#ffd400}
 .sync-pill.ok .sync-dot{background:#23c552}.sync-pill.err .sync-dot{background:#ff3b30}
 
+
+.topbar h1 .sync-pill{vertical-align:middle;transform:translateY(-1px)}
+@media(max-width:560px){.topbar h1 .sync-pill{display:inline-flex;margin-top:5px;margin-left:6px}}
+
 </style>
 </head>
 <body>
@@ -217,7 +221,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div>
         <div class="eyebrow">AI GOLF CADDIE</div>
-        <h1>GolfIQ <span style="font-size:.45em;color:var(--muted);font-weight:800;vertical-align:middle">v10.1</span></h1>
+        <h1>GolfIQ <span style="font-size:.45em;color:var(--muted);font-weight:800;vertical-align:middle">v10.2</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></h1>
       </div>
       <button id="importBtn" class="button secondary">Import Round</button>
     </header>
