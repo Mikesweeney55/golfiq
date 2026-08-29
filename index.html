@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfIQ v11.2</title>
+  <title>GolfIQ v11.3</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -346,6 +346,14 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
   .global-course-select{font-size:12px;padding-top:9px;padding-bottom:9px}
 }
 
+
+.backfill-target{margin:0 0 12px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.025)}
+.backfill-target strong{display:block;font-size:13px}
+.backfill-gaps{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.backfill-gap{font-size:10px;font-weight:850;border:1px solid var(--line);border-radius:999px;padding:4px 7px;color:var(--muted)}
+.backfill-note{margin:10px 0;padding:9px 10px;border-radius:10px;background:rgba(184,234,104,.06);border:1px solid rgba(184,234,104,.15);font-size:11px;color:var(--muted);line-height:1.45}
+.backfill-launch{width:100%;margin-top:10px}
+
 </style>
 </head>
 <body>
@@ -353,7 +361,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div class="topbar-left">
         <div class="brand-title">GolfIQ</div>
-        <div class="brand-meta"><span>v11.2</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
+        <div class="brand-meta"><span>v11.3</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
       </div>
 
       <div class="giq-logo" aria-label="GIQ">
@@ -459,12 +467,51 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
           </label>
         </div>
         <div class="edit-note">Changing gross score here does not rewrite the hole-by-hole scorecard. Use it only to correct an import-level error.</div>
+        <button id="backfillFromEdit" class="button secondary backfill-launch" type="button">Add / Backfill Stats from Screenshots</button>
         <div class="dialog-actions split">
           <button id="deleteEditRound" class="button danger" type="button">Delete Round</button>
           <div class="dialog-actions-right">
             <button id="cancelEditRound" class="button secondary" type="button">Cancel</button>
             <button id="saveEditRound" class="button primary" type="button">Save Changes</button>
           </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="backfillDialog">
+    <div class="dialog-card import-card">
+      <div class="dialog-head">
+        <div>
+          <div class="eyebrow">BACKFILL STATS</div>
+          <h2>Add missing round data</h2>
+        </div>
+        <button id="closeBackfill" class="icon-button" type="button">✕</button>
+      </div>
+
+      <input id="backfillRoundId" type="hidden" />
+
+      <div id="backfillUploadStep">
+        <div id="backfillTarget" class="backfill-target"></div>
+        <label class="upload-zone">
+          <input id="backfillFiles" type="file" accept="image/*" multiple />
+          <strong>Select screenshots</strong>
+          <span>Scorecard, stats, putting, or miss-pattern screens</span>
+        </label>
+        <div id="backfillFileList" class="file-list"></div>
+        <div class="backfill-note">GolfIQ will only fill fields that are currently blank. Existing round data will not be replaced.</div>
+        <div id="backfillStatus" class="import-status"></div>
+        <div class="dialog-actions">
+          <button id="analyzeBackfill" class="button primary" type="button">Analyze Screenshots</button>
+        </div>
+      </div>
+
+      <div id="backfillReviewStep" style="display:none">
+        <div class="eyebrow">REVIEW BACKFILL</div>
+        <div class="backfill-note">Only missing values will be added to the existing round. This does not create a new round.</div>
+        <div id="backfillReview" class="import-review"></div>
+        <div class="dialog-actions">
+          <button id="backBackfill" class="button secondary" type="button">Back</button>
+          <button id="saveBackfill" class="button primary" type="button">Add Missing Stats</button>
         </div>
       </div>
     </div>
@@ -1112,7 +1159,7 @@ function roundsView(){
  <div class="stat-tabs">${Object.entries(roundStatDefs).map(([k,x])=>`<button class="stat-tab ${k===key?'active':''}" data-round-stat="${k}">${x.short}</button>`).join('')}</div>
  <div class="filter-tabs"><button class="filter-tab ${state.roundFilter==='18'?'active':''}" data-round-filter="18">18 holes</button><button class="filter-tab ${state.roundFilter==='all'?'active':''}" data-round-filter="all">All</button><button class="filter-tab ${state.roundFilter==='9'?'active':''}" data-round-filter="9">9 holes</button></div>
  ${roundsChart(sorted,key)}
- <div class="section-head"><div><div class="eyebrow">ROUND LIST</div><h2>${selectedCourse?(selectedCourse.baseName||selectedCourse.name):'Score by round'}</h2></div></div><div class="card">${sorted.map(r=>{const c=course(r.courseId),diff=scoreDifferential(r),sel=String(state.selectedRoundId)===String(r.id);return `<div class="round-row round-summary ${r.supabaseImportId?'has-edit':''} ${sel?'selected':''}" data-round-row="${r.id}"><div><strong>${c.name}</strong><div class="muted">${fmtDate(r.date)} · ${c.tees} tees · Par ${c.par??'—'} · ${r.holes} holes</div></div><div class="score-big">${r.gross}${sel&&Number.isFinite(c.par)?`<span class="score-over">${r.gross-c.par>=0?'+':''}${r.gross-c.par}</span>`:''}</div><div><span class="badge">Diff ${diff==null?'—':diff.toFixed(1)}</span></div>${r.supabaseImportId?`<button class="edit-round-btn" data-edit-import="${r.supabaseImportId}" data-edit-round="${r.id}" type="button">Edit</button>`:''}</div>`}).join('')}</div>`;
+ <div class="section-head"><div><div class="eyebrow">ROUND LIST</div><h2>${selectedCourse?(selectedCourse.baseName||selectedCourse.name):'Score by round'}</h2></div></div><div class="card">${sorted.map(r=>{const c=course(r.courseId),diff=scoreDifferential(r),sel=String(state.selectedRoundId)===String(r.id);return `<div class="round-row round-summary has-edit ${sel?'selected':''}" data-round-row="${r.id}"><div><strong>${c.name}</strong><div class="muted">${fmtDate(r.date)} · ${c.tees} tees · Par ${c.par??'—'} · ${r.holes} holes</div></div><div class="score-big">${r.gross}${sel&&Number.isFinite(c.par)?`<span class="score-over">${r.gross-c.par>=0?'+':''}${r.gross-c.par}</span>`:''}</div><div><span class="badge">Diff ${diff==null?'—':diff.toFixed(1)}</span></div><button class="edit-round-btn" data-round-action="${r.id}" type="button">${r.supabaseImportId?'Edit':'Add Stats'}</button></div>`}).join('')}</div>`;
 }
 
 function gameCourseOptions(){
@@ -1255,7 +1302,12 @@ function selectRoundFromBar(id){
 }
 function render(){
  app.innerHTML=state.view==='pregame'?pregame():state.view==='memory'?memory():state.view==='rounds'?roundsView():myGame();
- document.querySelectorAll('[data-edit-import]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openEditRound(b.dataset.editRound)}));
+ document.querySelectorAll('[data-round-action]').forEach(b=>b.addEventListener('click',e=>{
+   e.stopPropagation();
+   const r=db.rounds.find(x=>String(x.id)===String(b.dataset.roundAction));
+   if(!r)return;
+   if(r.supabaseImportId)openEditRound(r.id); else openBackfillRound(r.id);
+ }));
  document.querySelectorAll('[data-game-scope]').forEach(b=>b.addEventListener('click',()=>{
    state.gameCourseId=b.dataset.gameScope==='all'?'all':state.selectedCourseId;render()
  }));
@@ -1286,6 +1338,118 @@ if(globalCourseSelect)globalCourseSelect.addEventListener('change',()=>setGlobal
 
 
 
+
+let pendingBackfill=null;
+const backfillDlg=document.getElementById('backfillDialog');
+const backfillFiles=document.getElementById('backfillFiles');
+const backfillFileList=document.getElementById('backfillFileList');
+const backfillStatus=document.getElementById('backfillStatus');
+const backfillUploadStep=document.getElementById('backfillUploadStep');
+const backfillReviewStep=document.getElementById('backfillReviewStep');
+const backfillReview=document.getElementById('backfillReview');
+
+function missingRoundStats(r){
+  const c=course(r.courseId);
+  const n=r.holes||c?.holeNumbers?.length||0;
+  const pars=c?.pars||[];
+  let fw=0,gir=0,putts=0;
+  for(let i=0;i<n;i++){
+    if(pars[i]!==3 && (r.fairways?.[i]===null || r.fairways?.[i]===undefined))fw++;
+    if(r.gir?.[i]===null || r.gir?.[i]===undefined)gir++;
+    if(r.putts?.[i]===null || r.putts?.[i]===undefined)putts++;
+  }
+  const puttingKnown=new Set(db.puttingDetails.filter(p=>p.date===r.date && normalizeCourseName(p.course)===normalizeCourseName(c?.name)).map(p=>Number(p.hole)));
+  const firstPutts=Math.max(0,n-puttingKnown.size);
+  return {fw,gir,putts,firstPutts};
+}
+function openBackfillRound(roundId){
+  const r=db.rounds.find(x=>String(x.id)===String(roundId));
+  if(!r)return;
+  const c=course(r.courseId),g=missingRoundStats(r);
+  pendingBackfill=null;
+  document.getElementById('backfillRoundId').value=r.id;
+  document.getElementById('backfillTarget').innerHTML=`
+    <strong>${safeText(c?.name||'Round')} · ${fmtDate(r.date)} · ${r.gross}</strong>
+    <div class="muted">${safeText(c?.tees||'')} tees · ${r.holes} holes</div>
+    <div class="backfill-gaps">
+      <span class="backfill-gap">${g.fw} FH gaps</span>
+      <span class="backfill-gap">${g.gir} GIR gaps</span>
+      <span class="backfill-gap">${g.putts} putt gaps</span>
+      <span class="backfill-gap">${g.firstPutts} first-putt gaps</span>
+    </div>`;
+  backfillFiles.value='';
+  backfillFileList.innerHTML='';
+  backfillStatus.textContent='';
+  backfillStatus.className='import-status';
+  backfillUploadStep.style.display='';
+  backfillReviewStep.style.display='none';
+  if(editDlg?.open)editDlg.close();
+  backfillDlg.showModal();
+}
+document.getElementById('closeBackfill').onclick=()=>backfillDlg.close();
+document.getElementById('backBackfill').onclick=()=>{
+  backfillReviewStep.style.display='none';
+  backfillUploadStep.style.display='';
+};
+backfillFiles.addEventListener('change',()=>{
+  backfillFileList.innerHTML=[...backfillFiles.files].map(f=>`<div class="file-item">${safeText(f.name)} · ${(f.size/1024/1024).toFixed(1)} MB</div>`).join('');
+});
+
+document.getElementById('analyzeBackfill').onclick=async()=>{
+  const files=[...backfillFiles.files];
+  if(!files.length){alert('Choose at least one screenshot.');return;}
+  const roundId=document.getElementById('backfillRoundId').value;
+  const target=db.rounds.find(x=>String(x.id)===String(roundId));
+  const c=course(target?.courseId);
+  if(!target||!c)return;
+  const btn=document.getElementById('analyzeBackfill');
+  try{
+    btn.disabled=true;btn.textContent='Analyzing…';
+    backfillStatus.className='import-status';
+    const images=[];
+    for(let i=0;i<files.length;i++){
+      backfillStatus.textContent=`Preparing screenshot ${i+1} of ${files.length}…`;
+      images.push(await compressImage(files[i]));
+    }
+    backfillStatus.textContent='Reading missing stats…';
+    const result=await callImportFunction({
+      action:'parse',
+      mode:'backfill',
+      source:'18Birdies',
+      note:`Backfill target only: ${c.name}; date ${target.date}; tees ${c.tees}; gross ${target.gross}; ${target.holes} holes. Extract only data actually visible in the screenshots.`,
+      images
+    });
+    pendingBackfill=result;
+    backfillReview.innerHTML=reviewHtml(result);
+    backfillUploadStep.style.display='none';
+    backfillReviewStep.style.display='';
+  }catch(e){
+    backfillStatus.className='import-status error';
+    backfillStatus.textContent=e.message;
+  }finally{
+    btn.disabled=false;btn.textContent='Analyze Screenshots';
+  }
+};
+
+document.getElementById('saveBackfill').onclick=async()=>{
+  const roundId=document.getElementById('backfillRoundId').value;
+  if(!roundId||!pendingBackfill)return;
+  const btn=document.getElementById('saveBackfill');
+  try{
+    btn.disabled=true;btn.textContent='Adding…';
+    const result=await callImportFunction({action:'backfill',round_id:roundId,parsed:pendingBackfill});
+    btn.textContent='Added ✓';
+    await bootstrapGolfIQ();
+    backfillDlg.close();
+    if(result?.filled){
+      setTimeout(()=>alert(`Backfill complete. Added ${result.filled} missing stat${result.filled===1?'':'s'}.`),150);
+    }
+  }catch(e){
+    alert(e.message);
+    btn.disabled=false;btn.textContent='Add Missing Stats';
+  }
+};
+
 const editDlg=document.getElementById('editRoundDialog');
 
 function openEditRound(roundId){
@@ -1303,6 +1467,12 @@ function openEditRound(roundId){
 }
 document.getElementById('closeEditRound').onclick=()=>editDlg.close();
 document.getElementById('cancelEditRound').onclick=()=>editDlg.close();
+document.getElementById('backfillFromEdit').onclick=()=>{
+  const importId=document.getElementById('editImportId').value;
+  const r=db.rounds.find(x=>String(x.supabaseImportId)===String(importId));
+  if(r)openBackfillRound(r.id);
+};
+
 
 document.getElementById('deleteEditRound').onclick=async()=>{
   const id=document.getElementById('editImportId').value;
