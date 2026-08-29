@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfIQ v10.7</title>
+  <title>GolfIQ v10.8</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -277,7 +277,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div class="topbar-left">
         <div class="brand-title">GolfIQ</div>
-        <div class="brand-meta"><span>v10.7</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
+        <div class="brand-meta"><span>v10.8</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
       </div>
 
       <div class="giq-logo" aria-label="GIQ">
@@ -359,6 +359,84 @@ const sum = arr => (arr||[]).reduce((a,b)=>a+(Number(b)||0),0);
 const fmtDate = d => new Date(d+'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
 const shortDate = d => new Date(d+'T12:00:00').toLocaleDateString(undefined,{month:'numeric',day:'numeric'});
 const courseShort = n => ({"Campbell's Scot. Highlands":"Campbell’s","Bill Flynn's Windham":"Windham","Birch Hill Country Club":"Birch Hill","Hidden Creek":"Hidden Crk","Hickory Hills":"Hickory","Passaconaway":"Passac.","Butter Brook":"Butter Brk","Four Oaks":"Four Oaks","Candia Woods":"Candia","Gold":"Kingswood"}[n] || n.split(' ').slice(0,2).join(' '));
+
+const CALUSA_BLUE_TEE_RATINGS={
+  'I':{rating:75.3,slope:143},
+  'II':{rating:71.5,slope:135},
+  'III':{rating:69.2,slope:127},
+  'IV':{rating:65.4,slope:115},
+  'V':{rating:62.8,slope:108},
+  'VI':{rating:59.9,slope:102}
+};
+const CALUSA_BLUE_PARS=[4,4,5,5,4,3,4,3,4,4,4,5,4,3,5,4,3,4];
+const CALUSA_BLUE_HDCP=[5,13,3,1,11,15,9,17,7,14,12,4,6,16,2,10,18,8];
+const CALUSA_GREEN_PARS=[4,5,3,5,4,4,4,3,4,5,3,4];
+const CALUSA_GREEN_HDCP=[13,7,1,9,15,5,11,17,3,4,14,18];
+
+function romanTee(v){
+  const s=String(v||'').toUpperCase().replace(/[^IVX]/g,'').trim();
+  return ['I','II','III','IV','V','VI'].includes(s)?s:null;
+}
+function isCalusaName(name){
+  return normalizeCourseName(name).includes('calusa');
+}
+function ensureCalusaCourseForImport(r){
+  if(!isCalusaName(r.course_name))return null;
+  const holes=Number(r.holes)||((r.holes_detail||[]).length||0);
+  const tee=romanTee(r.tees);
+  if(!tee)return null;
+
+  if(holes===18){
+    const id=`calusa-country-club-blue-${tee.toLowerCase()}-18-holes`;
+    let c=db.courses.find(x=>x.id===id);
+    if(!c){
+      const rs=CALUSA_BLUE_TEE_RATINGS[tee];
+      c={
+        id,
+        name:'Calusa Country Club — Blue',
+        baseName:'Calusa Country Club — Blue',
+        tees:tee,
+        yardage:0,
+        slope:rs.slope,
+        rating:rs.rating,
+        par:72,
+        pars:CALUSA_BLUE_PARS.slice(),
+        holeNumbers:Array.from({length:18},(_,i)=>i+1),
+        handicaps:CALUSA_BLUE_HDCP.slice(),
+        segment:'18 holes',
+        imported:true
+      };
+      db.courses.push(c);
+    }
+    return c;
+  }
+
+  if(holes===12){
+    const id=`calusa-country-club-green-${tee.toLowerCase()}-12-holes`;
+    let c=db.courses.find(x=>x.id===id);
+    if(!c){
+      c={
+        id,
+        name:'Calusa Country Club — Green',
+        baseName:'Calusa Country Club — Green',
+        tees:tee,
+        yardage:0,
+        slope:null,
+        rating:null,
+        par:48,
+        pars:CALUSA_GREEN_PARS.slice(),
+        holeNumbers:Array.from({length:12},(_,i)=>i+1),
+        handicaps:CALUSA_GREEN_HDCP.slice(),
+        segment:'12 holes',
+        imported:true
+      };
+      db.courses.push(c);
+    }
+    return c;
+  }
+  return null;
+}
+
 
 
 function puttingCourseNameForCourse(c){
@@ -830,9 +908,16 @@ function memory(){
 
 function scoreDifferential(r){
  const c=course(r.courseId);
- if(r.holes!==18 || !c || !Number.isFinite(c.rating) || !Number.isFinite(c.slope) || !c.slope)return null;
- // WHS 18-hole differential, using recorded gross as adjusted gross and PCC=0.
- return (r.gross-c.rating)*113/c.slope;
+ if(r.holes!==18 || !c)return null;
+ let rating=c.rating,slope=c.slope;
+ if((!Number.isFinite(rating)||!Number.isFinite(slope)) && isCalusaName(c.name||c.baseName)){
+   const tee=romanTee(c.tees);
+   const rs=tee?CALUSA_BLUE_TEE_RATINGS[tee]:null;
+   if(rs){rating=rs.rating;slope=rs.slope}
+ }
+ if(!Number.isFinite(rating) || !Number.isFinite(slope) || !slope)return null;
+ // WHS-like 18-hole estimate, using recorded gross as adjusted gross and PCC=0.
+ return (r.gross-rating)*113/slope;
 }
 
 const roundStatDefs={
@@ -1087,6 +1172,7 @@ function reviewHtml(x){
     <div class="import-summary">
       <div class="import-kpi"><div class="k">Course</div><div class="v">${val(r.course_name)}</div></div>
       <div class="import-kpi"><div class="k">Date</div><div class="v">${val(r.date)}</div></div>
+      <div class="import-kpi"><div class="k">Tees</div><div class="v">${val(r.tees)}</div></div>
       <div class="import-kpi"><div class="k">Score</div><div class="v">${val(r.gross_score)}</div></div>
       <div class="import-kpi"><div class="k">Putts</div><div class="v">${val(r.total_putts)}</div></div>
       <div class="import-kpi"><div class="k">Fairways</div><div class="v">${val(r.fairways_hit)}</div></div>
@@ -1188,7 +1274,7 @@ function createCourseFromImport(r){
   return c;
 }
 function resolveCourseForImport(r){
-  return findCourseForImport(r) || createCourseFromImport(r);
+  return ensureCalusaCourseForImport(r) || findCourseForImport(r) || createCourseFromImport(r);
 }
 function importSignature(r){
   return [
