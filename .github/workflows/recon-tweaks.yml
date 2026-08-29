@@ -1,84 +1,21 @@
 name: GolfRecon Maintenance
-
 on:
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/recon-tweaks.yml'
-  workflow_dispatch:
-
+    paths: ['.github/workflows/recon-tweaks.yml']
 permissions:
   contents: write
-
 jobs:
-  maintain:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply verified Pregame refresh fix
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('index.html')
-          s=p.read_text()
-          old="""function setGlobalCourse(id){
-  if(!db.courses.some(c=>c.id===id))return;
-  state.selectedCourseId=id;
-  state.gameCourseId=id;
-  state.roundCourseId=id;
-  state.selectedRoundId=null;
-  try{localStorage.setItem('golfreconSelectedCourseId',id)}catch{}
-  refreshGlobalCourseSelector();
-  render();
-}"""
-          new="""async function setGlobalCourse(id){
-  if(!db.courses.some(c=>c.id===id))return;
-  state.selectedCourseId=id;
-  state.gameCourseId=id;
-  state.roundCourseId=id;
-  state.selectedRoundId=null;
-  try{localStorage.setItem('golfreconSelectedCourseId',id)}catch{}
-  refreshGlobalCourseSelector();
-  render();
-
-  try{
-    const data=await callImportFunction({action:'bootstrap'});
-    db.player=data.player||db.player;
-    db.swingThoughts=data.swingThoughts||db.swingThoughts;
-    db.courses=data.courses||db.courses;
-    db.rounds=data.rounds||db.rounds;
-    db.puttingDetails=data.puttingDetails||db.puttingDetails;
-    db.clubStats=data.clubStats||db.clubStats;
-    if(!db.courses.some(c=>c.id===id)) state.selectedCourseId=db.courses[0]?.id||null;
-    if(state.gameCourseId!=='all') state.gameCourseId=state.selectedCourseId;
-    if(state.roundCourseId!=='all') state.roundCourseId=state.selectedCourseId;
-    refreshGlobalCourseSelector();
-    render();
-  }catch(e){
-    console.warn('Course refresh failed; using current synced data',e);
-  }
-}"""
-          if old not in s:
-              raise SystemExit('Verified setGlobalCourse block not found; refusing to modify file')
-          if '<title>GolfRecon v12.0 Beta</title>' not in s:
-              raise SystemExit('Expected v12.0 title not found; refusing to modify file')
-          s=s.replace(old,new,1)
-          s=s.replace('<title>GolfRecon v12.0 Beta</title>','<title>GolfRecon v12.1 Beta</title>',1)
-          p.write_text(s)
-          PY
-      - name: Verify exact changes
-        shell: bash
-        run: |
-          grep -q "async function setGlobalCourse(id)" index.html
-          grep -q "const data=await callImportFunction({action:'bootstrap'})" index.html
-          grep -q "<title>GolfRecon v12.1 Beta</title>" index.html
-          git diff --check
-      - name: Commit app change
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git commit -m "Fix Pregame course refresh and bump v12.1"
-          git push
+      - name: Patch index
+        env:
+          OLD_BLOCK: ZnVuY3Rpb24gc2V0R2xvYmFsQ291cnNlKGlkKXsKICBpZighZGIuY291cnNlcy5zb21lKGM9PmMuaWQ9PT1pZCkpcmV0dXJuOwogIHN0YXRlLnNlbGVjdGVkQ291cnNlSWQ9aWQ7CiAgc3RhdGUuZ2FtZUNvdXJzZUlkPWlkOwogIHN0YXRlLnJvdW5kQ291cnNlSWQ9aWQ7CiAgc3RhdGUuc2VsZWN0ZWRSb3VuZElkPW51bGw7CiAgdHJ5e2xvY2FsU3RvcmFnZS5zZXRJdGVtKCdnb2xmcmVjb25TZWxlY3RlZENvdXJzZUlkJyxpZCl9Y2F0Y2h7fQogIHJlZnJlc2hHbG9iYWxDb3Vyc2VTZWxlY3RvcigpOwogIHJlbmRlcigpOwp9
+          NEW_BLOCK: YXN5bmMgZnVuY3Rpb24gc2V0R2xvYmFsQ291cnNlKGlkKXsKICBpZighZGIuY291cnNlcy5zb21lKGM9PmMuaWQ9PT1pZCkpcmV0dXJuOwogIHN0YXRlLnNlbGVjdGVkQ291cnNlSWQ9aWQ7CiAgc3RhdGUuZ2FtZUNvdXJzZUlkPWlkOwogIHN0YXRlLnJvdW5kQ291cnNlSWQ9aWQ7CiAgc3RhdGUuc2VsZWN0ZWRSb3VuZElkPW51bGw7CiAgdHJ5e2xvY2FsU3RvcmFnZS5zZXRJdGVtKCdnb2xmcmVjb25TZWxlY3RlZENvdXJzZUlkJyxpZCl9Y2F0Y2h7fQogIHJlZnJlc2hHbG9iYWxDb3Vyc2VTZWxlY3RvcigpOwogIHJlbmRlcigpOwoKICB0cnl7CiAgICBjb25zdCBkYXRhPWF3YWl0IGNhbGxJbXBvcnRGdW5jdGlvbih7YWN0aW9uOidib290c3RyYXAnfSk7CiAgICBkYi5wbGF5ZXI9ZGF0YS5wbGF5ZXJ8fGRiLnBsYXllcjsKICAgIGRiLnN3aW5nVGhvdWdodHM9ZGF0YS5zd2luZ1Rob3VnaHRzfHxkYi5zd2luZ1Rob3VnaHRzOwogICAgZGIuY291cnNlcz1kYXRhLmNvdXJzZXN8fGRiLmNvdXJzZXM7CiAgICBkYi5yb3VuZHM9ZGF0YS5yb3VuZHN8fGRiLnJvdW5kczsKICAgIGRiLnB1dHRpbmdEZXRhaWxzPWRhdGEucHV0dGluZ0RldGFpbHN8fGRiLnB1dHRpbmdEZXRhaWxzOwogICAgZGIuY2x1YlN0YXRzPWRhdGEuY2x1YlN0YXRzfHxkYi5jbHViU3RhdHM7CiAgICBpZighZGIuY291cnNlcy5zb21lKGM9PmMuaWQ9PT1pZCkpIHN0YXRlLnNlbGVjdGVkQ291cnNlSWQ9ZGIuY291cnNlc1swXT8uaWR8fG51bGw7CiAgICBpZihzdGF0ZS5nYW1lQ291cnNlSWQhPT0nYWxsJykgc3RhdGUuZ2FtZUNvdXJzZUlkPXN0YXRlLnNlbGVjdGVkQ291cnNlSWQ7CiAgICBpZihzdGF0ZS5yb3VuZENvdXJzZUlkIT09J2FsbCcpIHN0YXRlLnJvdW5kQ291cnNlSWQ9c3RhdGUuc2VsZWN0ZWRDb3Vyc2VJZDsKICAgIHJlZnJlc2hHbG9iYWxDb3Vyc2VTZWxlY3RvcigpOwogICAgcmVuZGVyKCk7CiAgfWNhdGNoKGUpewogICAgY29uc29sZS53YXJuKCdDb3Vyc2UgcmVmcmVzaCBmYWlsZWQ7IHVzaW5nIGN1cnJlbnQgc3luY2VkIGRhdGEnLGUpOwogIH0KfQ==
+        run: python -c "import os,base64,pathlib; p=pathlib.Path('index.html'); s=p.read_text(); old=base64.b64decode(os.environ['OLD_BLOCK']).decode(); new=base64.b64decode(os.environ['NEW_BLOCK']).decode(); assert old in s; assert '<title>GolfRecon v12.0 Beta</title>' in s; s=s.replace(old,new,1).replace('<title>GolfRecon v12.0 Beta</title>','<title>GolfRecon v12.1 Beta</title>',1); p.write_text(s)"
+      - name: Verify
+        run: grep -q 'async function setGlobalCourse(id)' index.html && grep -q 'GolfRecon v12.1 Beta' index.html && git diff --check
+      - name: Commit
+        run: git config user.name github-actions-bot && git config user.email actions@github.com && git add index.html && git commit -m 'Fix Pregame refresh and bump v12.1' && git push
