@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfIQ v10.6</title>
+  <title>GolfIQ v10.7</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -277,7 +277,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div class="topbar-left">
         <div class="brand-title">GolfIQ</div>
-        <div class="brand-meta"><span>v10.6</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
+        <div class="brand-meta"><span>v10.7</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
       </div>
 
       <div class="giq-logo" aria-label="GIQ">
@@ -458,6 +458,7 @@ function pregameTendencies(c){
 
 function holeMemory(courseId){
   const c=course(courseId), rounds=roundsFor(courseId);
+  if(!c?.pars?.length || c.pars.some(p=>!Number.isFinite(p)))return [];
   return c.pars.map((par,i)=>{
     const vals=rounds.map(r=>({score:r.scores[i],fw:r.fairways?.[i],gir:r.gir?.[i],putts:r.putts?.[i],chips:r.chips?.[i]})).filter(x=>x.score!=null);
     if(!vals.length) return null;
@@ -596,6 +597,7 @@ function courseRoundStats(courseId,mode='all'){
 }
 function priorityHoles(courseId){
   const c=course(courseId), mem=holeMemory(courseId);
+  if(!mem.length)return [];
   const hcp=c.handicaps||[];
   const enriched=mem.map((h,i)=>{
     const holeHcp=hcp[i]??18;
@@ -743,7 +745,7 @@ function pregame(){
 
     <section class="hero" style="margin-top:14px">
       <div class="hero-copy"><div class="eyebrow">TOMORROW'S PREGAME</div><h2>${c.name}</h2>
-      <p class="muted">${c.tees} tees · Par ${c.par} · ${c.rating}/${c.slope} · ${rounds.length} round${rounds.length===1?'':'s'} in memory</p>
+      <p class="muted">${c.tees} tees · Par ${c.par??'—'} · ${c.rating??'—'}/${c.slope??'—'} · ${rounds.length} round${rounds.length===1?'':'s'} in memory</p>
       <div class="course-stat-lines">
         <div class="course-stat-row">
           <div class="row-label">Last</div>
@@ -874,7 +876,7 @@ function roundsView(){
  <div class="stat-tabs">${Object.entries(roundStatDefs).map(([k,x])=>`<button class="stat-tab ${k===key?'active':''}" data-round-stat="${k}">${x.short}</button>`).join('')}</div>
  <div class="filter-tabs"><button class="filter-tab ${state.roundFilter==='18'?'active':''}" data-round-filter="18">18 holes</button><button class="filter-tab ${state.roundFilter==='all'?'active':''}" data-round-filter="all">All</button><button class="filter-tab ${state.roundFilter==='9'?'active':''}" data-round-filter="9">9 holes</button></div>
  ${roundsChart(sorted,key)}
- <div class="section-head"><div><div class="eyebrow">ROUND LIST</div><h2>${selectedCourse?(selectedCourse.baseName||selectedCourse.name):'Score by round'}</h2></div></div><div class="card">${sorted.map(r=>{const c=course(r.courseId),diff=scoreDifferential(r),sel=String(state.selectedRoundId)===String(r.id);return `<div class="round-row round-summary ${sel?'selected':''}" data-round-row="${r.id}"><div><strong>${c.name}</strong><div class="muted">${fmtDate(r.date)} · ${c.tees} tees · Par ${c.par} · ${r.holes} holes</div></div><div class="score-big">${r.gross}${sel?`<span class="score-over">${r.gross-c.par>=0?'+':''}${r.gross-c.par}</span>`:''}</div><div><span class="badge">Diff ${diff==null?'—':diff.toFixed(1)}</span></div></div>`}).join('')}</div>`;
+ <div class="section-head"><div><div class="eyebrow">ROUND LIST</div><h2>${selectedCourse?(selectedCourse.baseName||selectedCourse.name):'Score by round'}</h2></div></div><div class="card">${sorted.map(r=>{const c=course(r.courseId),diff=scoreDifferential(r),sel=String(state.selectedRoundId)===String(r.id);return `<div class="round-row round-summary ${sel?'selected':''}" data-round-row="${r.id}"><div><strong>${c.name}</strong><div class="muted">${fmtDate(r.date)} · ${c.tees} tees · Par ${c.par??'—'} · ${r.holes} holes</div></div><div class="score-big">${r.gross}${sel&&Number.isFinite(c.par)?`<span class="score-over">${r.gross-c.par>=0?'+':''}${r.gross-c.par}</span>`:''}</div><div><span class="badge">Diff ${diff==null?'—':diff.toFixed(1)}</span></div></div>`}).join('')}</div>`;
 }
 
 function gameCourseOptions(){
@@ -1110,23 +1112,83 @@ async function callImportFunction(payload){
 function slugify(s){
   return (s||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 }
+function normalizeCourseName(s){
+  return String(s||'')
+    .toLowerCase()
+    .replace(/&/g,' and ')
+    .replace(/\bscottish\b/g,'scot')
+    .replace(/\bcountry\s+club\b/g,'cc')
+    .replace(/\bgolf\s+club\b/g,'')
+    .replace(/\bgolf\s+course\b/g,'')
+    .replace(/\bthe\b/g,'')
+    .replace(/[^a-z0-9]+/g,' ')
+    .trim()
+    .replace(/\s+/g,' ');
+}
+function normalizeTee(s){
+  return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+}
+function courseNameScore(a,b){
+  const na=normalizeCourseName(a),nb=normalizeCourseName(b);
+  if(!na||!nb)return 0;
+  if(na===nb)return 100;
+  if(na.includes(nb)||nb.includes(na))return 88;
+  const A=new Set(na.split(' ')),B=new Set(nb.split(' '));
+  const hit=[...A].filter(x=>B.has(x)).length;
+  const union=new Set([...A,...B]).size;
+  return union?100*hit/union:0;
+}
 function findCourseForImport(r){
   if(r.course_id){
     const exact=db.courses.find(c=>c.id===r.course_id);
     if(exact)return exact;
   }
-  const name=(r.course_name||'').toLowerCase().trim();
-  const tees=(r.tees||'').toLowerCase().trim();
-  const candidates=db.courses.filter(c=>{
-    const names=[c.name,c.baseName].filter(Boolean).map(x=>x.toLowerCase());
-    return names.some(n=>n===name || n.includes(name) || name.includes(n));
-  });
-  if(!candidates.length)return null;
-  if(tees){
-    const teeMatch=candidates.find(c=>(c.tees||'').toLowerCase()===tees);
-    if(teeMatch)return teeMatch;
+  const incoming=r.course_name||'';
+  const tee=normalizeTee(r.tees);
+  const ranked=db.courses.map(c=>{
+    const nameScore=Math.max(courseNameScore(incoming,c.name),courseNameScore(incoming,c.baseName));
+    const teeScore=tee && normalizeTee(c.tees)===tee ? 12 : 0;
+    return {c,score:nameScore+teeScore,nameScore,teeMatch:teeScore>0};
+  }).filter(x=>x.nameScore>=58).sort((a,b)=>b.score-a.score);
+
+  if(!ranked.length)return null;
+
+  // If an explicit tee is present, never silently attach to the wrong tee.
+  if(tee){
+    const exactTee=ranked.find(x=>x.teeMatch);
+    if(exactTee)return exactTee.c;
+    return null;
   }
-  return candidates[0];
+  return ranked[0].c;
+}
+function createCourseFromImport(r){
+  const hd=(r.holes_detail||r.hole_details||[]).slice().sort((a,b)=>Number(a.hole)-Number(b.hole));
+  const holes=Number(r.holes)||hd.length;
+  if(!r.course_name || !holes)return null;
+
+  const holeNumbers=hd.length?hd.map(h=>Number(h.hole)):Array.from({length:holes},(_,i)=>i+1);
+  const pars=hd.length?hd.map(h=>h.par==null?null:Number(h.par)):Array(holes).fill(null);
+  const handicaps=hd.length?hd.map(h=>h.handicap==null?null:Number(h.handicap)):Array(holes).fill(null);
+
+  // We can safely create the course shell even if a few course-level fields are unknown.
+  const par=Number.isFinite(Number(r.course_par))?Number(r.course_par):
+            (pars.length && pars.every(Number.isFinite)?sum(pars):null);
+  const rating=Number.isFinite(Number(r.course_rating))?Number(r.course_rating):null;
+  const slope=Number.isFinite(Number(r.course_slope))?Number(r.course_slope):null;
+  const segment=holes===18?'18 holes':(holeNumbers[0]===1?'Front 9':'9 holes');
+  let id=slugify(`${r.course_name}-${r.tees||'tees'}-${segment}`);
+  let n=2,base=id;
+  while(db.courses.some(c=>c.id===id))id=`${base}-${n++}`;
+
+  const c={
+    id,name:r.course_name,baseName:r.course_name,tees:r.tees||'Unknown',
+    yardage:0,slope,rating,par,pars,holeNumbers,handicaps,segment,imported:true
+  };
+  db.courses.push(c);
+  return c;
+}
+function resolveCourseForImport(r){
+  return findCourseForImport(r) || createCourseFromImport(r);
 }
 function importSignature(r){
   return [
@@ -1152,8 +1214,8 @@ function embeddedRoundSignatures(){
 function mergeImportedRound(parsed, importId){
   const r=parsed?.round;
   if(!r)return false;
-  const c=findCourseForImport(r);
-  if(!c)return false;
+  const c=resolveCourseForImport(r);
+  if(!c)return {added:false,reason:'unmapped',courseName:r.course_name||'Unknown course'};
 
   const sig=[
     r.date||'',
@@ -1171,7 +1233,7 @@ function mergeImportedRound(parsed, importId){
       x.holes??''
     ].join('|')===sig;
   });
-  if(exists)return false;
+  if(exists)return {added:false,reason:'duplicate',course:c};
 
   const hd=r.holes_detail||[];
   const holes=r.holes || hd.length || c.holeNumbers?.length || 18;
@@ -1188,7 +1250,7 @@ function mergeImportedRound(parsed, importId){
     courseId:c.id,
     gross:r.gross_score,
     net:r.net_score,
-    scoreToPar:(r.gross_score!=null && c.par!=null)?r.gross_score-c.par:null,
+    scoreToPar:(r.gross_score!=null && Number.isFinite(c.par))?r.gross_score-c.par:null,
     holes,
     scores:arr('score'),
     fairways:boolArr('fairway_hit'),
@@ -1236,26 +1298,41 @@ function mergeImportedRound(parsed, importId){
       supabaseImportId:importId||null
     });
   });
-  return true;
+  return {added:true,reason:'added',course:c};
 }
 async function syncSupabaseRounds(){
   const pill=document.getElementById('syncPill'),txt=document.getElementById('syncText');
   try{
     if(txt)txt.textContent='Syncing';
+    if(pill){pill.classList.remove('ok','err')}
     const result=await callImportFunction({action:'list'});
-    let added=0;
+    let added=0,unmapped=0;
+    const unmappedNames=[];
     for(const row of result.imports||[]){
-      if(mergeImportedRound(row.parsed,row.id))added++;
+      const merged=mergeImportedRound(row.parsed,row.id);
+      if(merged?.added)added++;
+      if(merged?.reason==='unmapped'){
+        unmapped++;
+        unmappedNames.push(merged.courseName);
+      }
     }
     db.rounds.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
     db.puttingDetails.sort((a,b)=>String(a.date).localeCompare(String(b.date))||Number(a.hole)-Number(b.hole));
-    if(pill)pill.classList.add('ok');
-    if(txt)txt.textContent=`Synced${added?` +${added}`:''}`;
+    if(unmapped){
+      if(pill)pill.classList.add('err');
+      if(txt)txt.textContent=`${unmapped} needs course`;
+      console.warn('GolfIQ imports needing course mapping:',unmappedNames);
+    }else{
+      if(pill)pill.classList.add('ok');
+      if(txt)txt.textContent=`Synced${added?` +${added}`:''}`;
+    }
     render();
+    return {added,unmapped};
   }catch(e){
     if(pill)pill.classList.add('err');
     if(txt)txt.textContent='Offline data';
     console.warn('Supabase sync failed',e);
+    return {added:0,unmapped:0,error:e};
   }
 }
 
@@ -1307,7 +1384,10 @@ document.getElementById('saveImport').onclick=async()=>{
       return;
     }
     btn.textContent='Saved ✓';
-    await syncSupabaseRounds();
+    const syncResult=await syncSupabaseRounds();
+    if(syncResult?.unmapped){
+      alert('The round was saved to Supabase, but GolfIQ still needs a course match before it can appear in analytics.');
+    }
     setTimeout(()=>{dlg.close()},400);
   }catch(e){
     alert(e.message);
