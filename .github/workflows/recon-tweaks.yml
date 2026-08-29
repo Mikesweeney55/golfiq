@@ -1,22 +1,28 @@
 name: GolfRecon Maintenance
+
 on:
   push:
+    branches: [main]
     paths:
       - '.github/workflows/recon-tweaks.yml'
+  workflow_dispatch:
+
 permissions:
   contents: write
+
 jobs:
   maintain:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Fix Pregame course refresh
+        shell: bash
         run: |
-          python3 - <<'PY'
+          python - <<'PY'
           from pathlib import Path
-          p=Path('index.html')
-          s=p.read_text()
-          old="""function setGlobalCourse(id){
+          p = Path('index.html')
+          s = p.read_text()
+          old = """function setGlobalCourse(id){
   if(!db.courses.some(c=>c.id===id))return;
   state.selectedCourseId=id;
   state.gameCourseId=id;
@@ -26,18 +32,7 @@ jobs:
   refreshGlobalCourseSelector();
   render();
 }"""
-          if old not in s:
-              old="""function setGlobalCourse(id){
-  if(!db.courses.some(c=>c.id===id))return;
-  state.selectedCourseId=id;
-  state.gameCourseId=id;
-  state.roundCourseId=id;
-  state.selectedRoundId=null;
-  try{localStorage.setItem('golfiqSelectedCourseId',id)}catch{}
-  refreshGlobalCourseSelector();
-  render();
-}"""
-          new="""async function setGlobalCourse(id){
+          new = """async function setGlobalCourse(id){
   if(!db.courses.some(c=>c.id===id))return;
   state.selectedCourseId=id;
   state.gameCourseId=id;
@@ -46,6 +41,7 @@ jobs:
   try{localStorage.setItem('golfreconSelectedCourseId',id)}catch{}
   refreshGlobalCourseSelector();
   render();
+
   try{
     const data=await callImportFunction({action:'bootstrap'});
     db.player=data.player||db.player;
@@ -54,9 +50,9 @@ jobs:
     db.rounds=data.rounds||db.rounds;
     db.puttingDetails=data.puttingDetails||db.puttingDetails;
     db.clubStats=data.clubStats||db.clubStats;
-    if(!db.courses.some(c=>c.id===id))state.selectedCourseId=db.courses[0]?.id||null;
-    if(state.gameCourseId!=='all')state.gameCourseId=state.selectedCourseId;
-    if(state.roundCourseId!=='all')state.roundCourseId=state.selectedCourseId;
+    if(!db.courses.some(c=>c.id===id)) state.selectedCourseId=db.courses[0]?.id||null;
+    if(state.gameCourseId!=='all') state.gameCourseId=state.selectedCourseId;
+    if(state.roundCourseId!=='all') state.roundCourseId=state.selectedCourseId;
     refreshGlobalCourseSelector();
     render();
   }catch(e){
@@ -64,23 +60,19 @@ jobs:
   }
 }"""
           if old not in s:
-              raise SystemExit('setGlobalCourse block not found')
-          s=s.replace(old,new,1)
-          s=s.replace("savedCourse=localStorage.getItem('golfiqSelectedCourseId')","savedCourse=localStorage.getItem('golfreconSelectedCourseId')||localStorage.getItem('golfiqSelectedCourseId')")
+            raise SystemExit('Expected setGlobalCourse block not found; no changes made')
+          s = s.replace(old,new,1)
           p.write_text(s)
           PY
-      - name: Verify database paths still exist
+      - name: Commit refresh fix
+        shell: bash
         run: |
-          grep -q "action:'bootstrap'" index.html
-          grep -q "action:'save'" index.html
-          grep -q "action:'update'" index.html
-          grep -q "action:'delete'" index.html
-          grep -q "db.rounds" index.html
-          grep -q "puttingDetails" index.html
-      - name: Commit maintenance change
-        run: |
-          git config user.name "Mikesweeney55"
-          git config user.email "Mikesweeney55@yahoo.com"
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git diff --cached --quiet || git commit -m "Refresh Pregame data when switching courses"
+          git commit -m "Refresh Pregame data when switching courses"
           git push
