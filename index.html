@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfIQ v10.0</title>
+  <title>GolfIQ v10.1</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -205,6 +205,11 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
 .import-confidence{font-size:11px;color:var(--muted)}
 @media(max-width:560px){.import-summary{grid-template-columns:1fr 1fr}.import-hole-table{font-size:10px}}
 
+
+.sync-pill{display:inline-flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);padding:4px 8px;border:1px solid var(--line);border-radius:999px;margin-left:8px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#ffd400}
+.sync-pill.ok .sync-dot{background:#23c552}.sync-pill.err .sync-dot{background:#ff3b30}
+
 </style>
 </head>
 <body>
@@ -212,7 +217,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div>
         <div class="eyebrow">AI GOLF CADDIE</div>
-        <h1>GolfIQ <span style="font-size:.45em;color:var(--muted);font-weight:800;vertical-align:middle">v10.0</span></h1>
+        <h1>GolfIQ <span style="font-size:.45em;color:var(--muted);font-weight:800;vertical-align:middle">v10.1</span></h1>
       </div>
       <button id="importBtn" class="button secondary">Import Round</button>
     </header>
@@ -836,6 +841,158 @@ async function callImportFunction(payload){
   if(!res.ok) throw new Error(body.error||body.message||`Import failed (${res.status})`);
   return body;
 }
+function slugify(s){
+  return (s||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+function findCourseForImport(r){
+  if(r.course_id){
+    const exact=db.courses.find(c=>c.id===r.course_id);
+    if(exact)return exact;
+  }
+  const name=(r.course_name||'').toLowerCase().trim();
+  const tees=(r.tees||'').toLowerCase().trim();
+  const candidates=db.courses.filter(c=>{
+    const names=[c.name,c.baseName].filter(Boolean).map(x=>x.toLowerCase());
+    return names.some(n=>n===name || n.includes(name) || name.includes(n));
+  });
+  if(!candidates.length)return null;
+  if(tees){
+    const teeMatch=candidates.find(c=>(c.tees||'').toLowerCase()===tees);
+    if(teeMatch)return teeMatch;
+  }
+  return candidates[0];
+}
+function importSignature(r){
+  return [
+    r.date||r.played_on||'',
+    (r.course_name||'').trim().toLowerCase(),
+    r.gross_score??r.gross??'',
+    r.holes??''
+  ].join('|');
+}
+function embeddedRoundSignatures(){
+  const sigs=new Set();
+  db.rounds.forEach(r=>{
+    const c=db.courses.find(x=>x.id===r.courseId);
+    sigs.add([
+      r.date||'',
+      ((c?.baseName||c?.name||'')).trim().toLowerCase(),
+      r.gross??'',
+      r.holes??''
+    ].join('|'));
+  });
+  return sigs;
+}
+function mergeImportedRound(parsed, importId){
+  const r=parsed?.round;
+  if(!r)return false;
+  const c=findCourseForImport(r);
+  if(!c)return false;
+
+  const sig=[
+    r.date||'',
+    ((c.baseName||c.name||'')).trim().toLowerCase(),
+    r.gross_score??'',
+    r.holes??''
+  ].join('|');
+
+  const exists=db.rounds.some(x=>{
+    const xc=db.courses.find(cc=>cc.id===x.courseId);
+    return [
+      x.date||'',
+      ((xc?.baseName||xc?.name||'')).trim().toLowerCase(),
+      x.gross??'',
+      x.holes??''
+    ].join('|')===sig;
+  });
+  if(exists)return false;
+
+  const hd=r.holes_detail||[];
+  const holes=r.holes || hd.length || c.holeNumbers?.length || 18;
+  const arr=(key)=>Array.from({length:holes},(_,i)=>{
+    const h=hd.find(x=>Number(x.hole)===Number(c.holeNumbers?.[i]??i+1)) || hd[i];
+    return h?.[key] ?? null;
+  });
+  const boolArr=(key)=>arr(key).map(v=>v===true?1:v===false?0:null);
+
+  const nextId=String(Math.max(0,...db.rounds.map(x=>Number(x.id)||0))+1);
+  const nr={
+    id:nextId,
+    date:r.date,
+    courseId:c.id,
+    gross:r.gross_score,
+    net:r.net_score,
+    scoreToPar:(r.gross_score!=null && c.par!=null)?r.gross_score-c.par:null,
+    holes,
+    scores:arr('score'),
+    fairways:boolArr('fairway_hit'),
+    gir:boolArr('gir'),
+    putts:arr('putts'),
+    chips:arr('chips'),
+    sand:arr('sand'),
+    penalties:arr('penalties'),
+    source:r.source_app||'18Birdies',
+    importConfidence:parsed.confidence??null,
+    supabaseImportId:importId||null
+  };
+  if(r.fairway_distribution){
+    nr.fairwayDistribution={
+      hitPct:r.fairway_distribution.hit_pct,
+      missLeftPct:r.fairway_distribution.left_pct,
+      missRightPct:r.fairway_distribution.right_pct,
+      missShortPct:r.fairway_distribution.short_pct,
+      missLongPct:r.fairway_distribution.long_pct,
+      missFairwaysHitPct:0
+    };
+  }
+  if(r.gir_distribution){
+    nr.girDistribution={
+      hitPct:r.gir_distribution.hit_pct,
+      missShortPct:r.gir_distribution.short_pct,
+      missLeftPct:r.gir_distribution.left_pct,
+      missRightPct:r.gir_distribution.right_pct,
+      missLongPct:r.gir_distribution.long_pct,
+      missGirPct:r.gir_distribution.other_pct,
+      noChancePct:0
+    };
+  }
+  db.rounds.push(nr);
+
+  hd.forEach(h=>{
+    if(h.first_putt_distance_ft==null || h.putts==null)return;
+    db.puttingDetails.push({
+      date:r.date,
+      course:c.name,
+      hole:h.hole,
+      distance:Number(h.first_putt_distance_ft),
+      putts:Number(h.putts),
+      sg:h.putting_sg==null?0:Number(h.putting_sg),
+      supabaseImportId:importId||null
+    });
+  });
+  return true;
+}
+async function syncSupabaseRounds(){
+  const pill=document.getElementById('syncPill'),txt=document.getElementById('syncText');
+  try{
+    if(txt)txt.textContent='Syncing';
+    const result=await callImportFunction({action:'list'});
+    let added=0;
+    for(const row of result.imports||[]){
+      if(mergeImportedRound(row.parsed,row.id))added++;
+    }
+    db.rounds.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    db.puttingDetails.sort((a,b)=>String(a.date).localeCompare(String(b.date))||Number(a.hole)-Number(b.hole));
+    if(pill)pill.classList.add('ok');
+    if(txt)txt.textContent=`Synced${added?` +${added}`:''}`;
+    render();
+  }catch(e){
+    if(pill)pill.classList.add('err');
+    if(txt)txt.textContent='Offline data';
+    console.warn('Supabase sync failed',e);
+  }
+}
+
 document.getElementById('analyzeImport').onclick=async()=>{
   const files=[...fileInput.files];
   if(!files.length){alert('Choose at least one screenshot.');return;}
@@ -867,18 +1024,32 @@ document.getElementById('analyzeImport').onclick=async()=>{
 };
 document.getElementById('saveImport').onclick=async()=>{
   if(!pendingImport)return;
+  const r=pendingImport.round||pendingImport;
+  const sig=importSignature(r);
+  const embedded=embeddedRoundSignatures();
+  if(embedded.has(sig)){
+    const ok=confirm('This round appears to already exist in GolfIQ. Save it to Supabase anyway?');
+    if(!ok)return;
+  }
   const btn=document.getElementById('saveImport');
   try{
     btn.disabled=true;btn.textContent='Saving…';
     const result=await callImportFunction({action:'save',parsed:pendingImport});
+    if(result.duplicate){
+      alert('Duplicate detected. This round is already saved in GolfIQ.');
+      btn.disabled=false;btn.textContent='Save Round';
+      return;
+    }
     btn.textContent='Saved ✓';
-    setTimeout(()=>{dlg.close();location.reload()},500);
+    await syncSupabaseRounds();
+    setTimeout(()=>{dlg.close()},400);
   }catch(e){
     alert(e.message);
     btn.disabled=false;btn.textContent='Save Round';
   }
 };
 render();
+syncSupabaseRounds();
 
 
 </script>
