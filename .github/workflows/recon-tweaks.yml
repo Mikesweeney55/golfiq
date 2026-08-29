@@ -1,0 +1,58 @@
+name: GolfRecon UI Tweaks
+on:
+  push:
+    paths:
+      - '.github/workflows/recon-tweaks.yml'
+permissions:
+  contents: write
+jobs:
+  tweak:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply requested UI tweaks
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          # Navigation/theme terminology
+          s=s.replace('>Groups<','>Platoons<').replace('Groups</','Platoons</')
+          # Requested pregame heading terminology
+          s=s.replace('>Head<','>Swing Thoughts<').replace('>HEAD<','>SWING THOUGHTS<')
+          s=s.replace('Head</','Swing Thoughts</')
+          # Move What matters tomorrow card/section directly before Swing Thoughts when both are sibling blocks.
+          import re
+          # Handle common section/card blocks containing the two headings.
+          for tag in ('section','div'):
+              pat=re.compile(rf'(<{tag}[^>]*>(?:(?!</{tag}>).)*?What matters tomorrow(?:(?!</{tag}>).)*?</{tag}>)(\s*)(<{tag}[^>]*>(?:(?!</{tag}>).)*?Swing Thoughts(?:(?!</{tag}>).)*?</{tag}>)',re.S|re.I)
+              # already correct order; no action needed
+          # If Swing Thoughts precedes What matters tomorrow, swap adjacent blocks.
+          for tag in ('section','div'):
+              pat=re.compile(rf'(<{tag}[^>]*>(?:(?!</{tag}>).)*?Swing Thoughts(?:(?!</{tag}>).)*?</{tag}>)(\s*)(<{tag}[^>]*>(?:(?!</{tag}>).)*?What matters tomorrow(?:(?!</{tag}>).)*?</{tag}>)',re.S|re.I)
+              s=pat.sub(r'\3\2\1',s)
+          # Add a compact branded logo lockup to the topbar, replacing simple GR mark when present.
+          logo='''<div class="gr-brand" aria-label="GolfRecon"><div class="gr-mark"><span class="gr-cross">GR</span><span class="gr-flag">⚑</span></div><div class="gr-word"><strong>GOLFRECON</strong><small>KNOW YOUR GAME. PLAY SMARTER.</small></div></div>'''
+          # Replace likely existing brand label/mark in topbar only.
+          m=re.search(r'(<div[^>]*class="[^"]*topbar[^"]*"[^>]*>)(.*?)(</div>\s*(?:<main|<section|<div class="hero))',s,re.S|re.I)
+          if m:
+              inner=m.group(2)
+              # Replace first GolfRecon/GR brand-ish element, conservatively.
+              inner2=re.sub(r'<div[^>]*class="[^"]*(?:brand|logo)[^"]*"[^>]*>.*?</div>',logo,inner,count=1,flags=re.S|re.I)
+              if inner2==inner:
+                  inner2=re.sub(r'<[^>]+>\s*GR\s*</[^>]+>',logo,inner,count=1,flags=re.I)
+              if inner2==inner:
+                  inner2=logo+inner
+              s=s[:m.start(2)]+inner2+s[m.end(2):]
+          # CSS for the logo lockup
+          css='''.gr-brand{display:flex;align-items:center;gap:10px;justify-self:start}.gr-mark{width:48px;height:48px;border:2px solid var(--accent);border-radius:50%;display:grid;place-items:center;position:relative;background:#102019;box-shadow:inset 0 0 0 3px #102019,0 0 0 1px rgba(184,234,104,.2)}.gr-mark:before,.gr-mark:after{content:"";position:absolute;background:var(--accent);opacity:.55}.gr-mark:before{width:1px;height:100%;left:50%}.gr-mark:after{height:1px;width:100%;top:50%}.gr-cross{font-size:17px;font-weight:950;letter-spacing:-.06em;color:#f5f7f6;z-index:1}.gr-flag{position:absolute;font-size:10px;color:var(--accent);right:4px;top:4px;z-index:2}.gr-word{display:grid;line-height:1}.gr-word strong{font-size:16px;letter-spacing:.08em}.gr-word small{font-size:7px;letter-spacing:.12em;color:var(--accent);margin-top:5px;font-weight:850}@media(max-width:520px){.gr-word small{display:none}.gr-word strong{font-size:13px}.gr-mark{width:42px;height:42px}}'''
+          s=s.replace('</style>',css+'\n</style>',1)
+          p.write_text(s)
+          PY
+      - name: Commit tweaks
+        run: |
+          git config user.name "Mikesweeney55"
+          git config user.email "Mikesweeney55@yahoo.com"
+          git add index.html
+          git diff --cached --quiet || git commit -m "Apply GolfRecon platoon and pregame UI tweaks"
+          git push
