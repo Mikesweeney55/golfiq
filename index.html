@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfIQ v10.8</title>
+  <title>GolfIQ v10.9</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -270,6 +270,26 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
   .sync-pill{padding:3px 5px;margin-left:2px}
 }
 
+
+.course-dropdown-wrap{position:relative;margin:4px 0 14px}
+.course-dropdown{width:100%;appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:#14231d;color:var(--text);border-radius:14px;padding:11px 38px 11px 13px;font-size:13px;font-weight:850;outline:none}
+.course-dropdown:focus{border-color:rgba(184,234,104,.55);box-shadow:0 0 0 2px rgba(184,234,104,.08),0 0 12px rgba(184,234,104,.08)}
+.course-dropdown-wrap::after{content:'⌄';position:absolute;right:14px;top:50%;transform:translateY(-54%);pointer-events:none;color:var(--accent);font-size:18px;font-weight:900}
+.edit-round-btn{border:1px solid var(--line);background:#16251f;color:var(--text);border-radius:999px;padding:6px 9px;font-size:10px;font-weight:850;white-space:nowrap}
+.edit-round-btn:hover{border-color:rgba(184,234,104,.45)}
+.round-summary.has-edit{grid-template-columns:minmax(150px,1fr) .30fr .48fr auto}
+.edit-form{display:grid;gap:11px}
+.edit-form label{display:grid;gap:5px;font-size:11px;color:var(--muted);font-weight:800}
+.edit-form input,.edit-form select{width:100%;border:1px solid var(--line);background:#0f1915;color:var(--text);border-radius:11px;padding:10px 11px;outline:none}
+.edit-form input:focus,.edit-form select:focus{border-color:rgba(184,234,104,.55)}
+.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.edit-note{font-size:10px;color:var(--muted);line-height:1.4}
+@media(max-width:560px){
+  .round-summary.has-edit{grid-template-columns:minmax(120px,1fr) .28fr .45fr auto;gap:5px}
+  .edit-round-btn{padding:5px 7px}
+  .edit-grid{grid-template-columns:1fr}
+}
+
 </style>
 </head>
 <body>
@@ -277,7 +297,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div class="topbar-left">
         <div class="brand-title">GolfIQ</div>
-        <div class="brand-meta"><span>v10.8</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
+        <div class="brand-meta"><span>v10.9</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
       </div>
 
       <div class="giq-logo" aria-label="GIQ">
@@ -336,6 +356,44 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
         <div class="dialog-actions">
           <button id="backImport" type="button" class="button secondary">Back</button>
           <button id="saveImport" type="button" class="button primary">Save Round</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="editRoundDialog">
+    <div class="dialog-card import-card">
+      <div class="dialog-head">
+        <div>
+          <div class="eyebrow">EDIT ROUND</div>
+          <h2>Correct imported data</h2>
+        </div>
+        <button id="closeEditRound" class="icon-button" type="button">✕</button>
+      </div>
+      <div class="edit-form">
+        <input id="editImportId" type="hidden" />
+        <label>Course
+          <select id="editCourse"></select>
+        </label>
+        <div class="edit-grid">
+          <label>Tee
+            <input id="editTee" placeholder="White, II, etc." />
+          </label>
+          <label>Date
+            <input id="editDate" type="date" />
+          </label>
+        </div>
+        <div class="edit-grid">
+          <label>Gross score
+            <input id="editGross" type="number" inputmode="numeric" />
+          </label>
+          <label>Net score
+            <input id="editNet" type="number" inputmode="numeric" />
+          </label>
+        </div>
+        <div class="edit-note">Changing gross score here does not rewrite the hole-by-hole scorecard. Use it only to correct an import-level error.</div>
+        <div class="dialog-actions">
+          <button id="cancelEditRound" class="button secondary" type="button">Cancel</button>
+          <button id="saveEditRound" class="button primary" type="button">Save Changes</button>
         </div>
       </div>
     </div>
@@ -585,6 +643,11 @@ function courseMenuLabel(c){
   const dupes=db.courses.filter(x=>x.name===c.name);
   return dupes.length>1 ? `${c.name} · ${c.tees}` : c.name;
 }
+function courseDropdownOptions(selectedId,includeAll=false,allLabel='All courses'){
+  const list=sortedCourses();
+  return `${includeAll?`<option value="all" ${selectedId==='all'?'selected':''}>${allLabel}</option>`:''}${list.map(c=>`<option value="${c.id}" ${selectedId===c.id?'selected':''}>${safeText(courseMenuLabel(c))}</option>`).join('')}`;
+}
+
 function holeLastRound(courseId,holeNumber){
   const c=course(courseId), r=roundsFor(courseId)[0];
   if(!r)return null;
@@ -819,7 +882,7 @@ function pregame(){
   const pctVal=v=>v==null?'—':`${v}%`, numVal=v=>v==null?'—':v.toFixed(1);
   return `
     <div class="section-head" style="margin-top:0"><div><div class="eyebrow">NEXT ROUND</div><h2>Choose course</h2></div></div>
-    <div class="course-select">${sortedCourses().map(x=>`<button class="course-pill ${x.id===c.id?'active':''}" data-course="${x.id}">${courseMenuLabel(x)}</button>`).join('')}</div>
+    <div class="course-dropdown-wrap"><select id="pregameCourseSelect" class="course-dropdown">${courseDropdownOptions(c.id)}</select></div>
 
     <section class="hero" style="margin-top:14px">
       <div class="hero-copy"><div class="eyebrow">TOMORROW'S PREGAME</div><h2>${c.name}</h2>
@@ -901,7 +964,7 @@ function renderHoleCard(h,showPriority=false){
 function memory(){
   const c=course(state.selectedCourseId), mem=holeMemory(c.id);
   return `<div class="section-head"><div><div class="eyebrow">HOLE-BY-HOLE MEMORY</div><h2>${c.name}</h2></div></div>
-  <div class="course-select">${sortedCourses().map(x=>`<button class="course-pill ${x.id===c.id?'active':''}" data-course="${x.id}">${courseMenuLabel(x)}</button>`).join('')}</div>
+  <div class="course-dropdown-wrap"><select id="memoryCourseSelect" class="course-dropdown">${courseDropdownOptions(c.id)}</select></div>
   <div class="risk-legend"><span class="chip"><span class="risk-dot">L</span> Low risk</span><span class="chip"><span class="risk-dot" style="background:var(--warning);color:#2a2200">M</span> Medium risk</span><span class="chip"><span class="risk-dot" style="background:var(--danger);color:#fff">H</span> High risk</span></div>
   <div class="hole-grid">${mem.map(renderHoleCard).join('')}</div>`;
 }
@@ -954,14 +1017,11 @@ function roundsView(){
  const selectedCourse=state.roundCourseId==='all'?null:course(state.roundCourseId);
  return `<div class="section-head"><div><div class="eyebrow">ROUND DATABASE</div><h2>${selectedCourse?(selectedCourse.baseName||selectedCourse.name):'All courses'} · ${sorted.length} round${sorted.length===1?'':'s'}</h2></div></div>
  <div class="game-filter-label">Course</div>
- <div class="putting-course-filter">
-   <button class="putting-course ${state.roundCourseId==='all'?'active':''}" data-round-course="all">All courses</button>
-   ${courseChoices.map(c=>`<button class="putting-course ${state.roundCourseId===c.id?'active':''}" data-round-course="${c.id}">${courseShort(c.baseName||c.name)}${c.tees?` · ${c.tees}`:''}</button>`).join('')}
- </div>
+ <div class="course-dropdown-wrap"><select id="roundCourseSelect" class="course-dropdown">${courseDropdownOptions(state.roundCourseId,true,'All courses')}</select></div>
  <div class="stat-tabs">${Object.entries(roundStatDefs).map(([k,x])=>`<button class="stat-tab ${k===key?'active':''}" data-round-stat="${k}">${x.short}</button>`).join('')}</div>
  <div class="filter-tabs"><button class="filter-tab ${state.roundFilter==='18'?'active':''}" data-round-filter="18">18 holes</button><button class="filter-tab ${state.roundFilter==='all'?'active':''}" data-round-filter="all">All</button><button class="filter-tab ${state.roundFilter==='9'?'active':''}" data-round-filter="9">9 holes</button></div>
  ${roundsChart(sorted,key)}
- <div class="section-head"><div><div class="eyebrow">ROUND LIST</div><h2>${selectedCourse?(selectedCourse.baseName||selectedCourse.name):'Score by round'}</h2></div></div><div class="card">${sorted.map(r=>{const c=course(r.courseId),diff=scoreDifferential(r),sel=String(state.selectedRoundId)===String(r.id);return `<div class="round-row round-summary ${sel?'selected':''}" data-round-row="${r.id}"><div><strong>${c.name}</strong><div class="muted">${fmtDate(r.date)} · ${c.tees} tees · Par ${c.par??'—'} · ${r.holes} holes</div></div><div class="score-big">${r.gross}${sel&&Number.isFinite(c.par)?`<span class="score-over">${r.gross-c.par>=0?'+':''}${r.gross-c.par}</span>`:''}</div><div><span class="badge">Diff ${diff==null?'—':diff.toFixed(1)}</span></div></div>`}).join('')}</div>`;
+ <div class="section-head"><div><div class="eyebrow">ROUND LIST</div><h2>${selectedCourse?(selectedCourse.baseName||selectedCourse.name):'Score by round'}</h2></div></div><div class="card">${sorted.map(r=>{const c=course(r.courseId),diff=scoreDifferential(r),sel=String(state.selectedRoundId)===String(r.id);return `<div class="round-row round-summary ${r.supabaseImportId?'has-edit':''} ${sel?'selected':''}" data-round-row="${r.id}"><div><strong>${c.name}</strong><div class="muted">${fmtDate(r.date)} · ${c.tees} tees · Par ${c.par??'—'} · ${r.holes} holes</div></div><div class="score-big">${r.gross}${sel&&Number.isFinite(c.par)?`<span class="score-over">${r.gross-c.par>=0?'+':''}${r.gross-c.par}</span>`:''}</div><div><span class="badge">Diff ${diff==null?'—':diff.toFixed(1)}</span></div>${r.supabaseImportId?`<button class="edit-round-btn" data-edit-import="${r.supabaseImportId}" data-edit-round="${r.id}" type="button">Edit</button>`:''}</div>`}).join('')}</div>`;
 }
 
 function gameCourseOptions(){
@@ -1066,10 +1126,7 @@ function myGame(){
  return `<div class="section-head"><div><div class="eyebrow">PLAYER MODEL</div><h2>My Game</h2></div></div>
  <div class="game-filter-block">
    <div class="game-filter-label">Data</div>
-   <div class="putting-course-filter">
-     <button class="putting-course ${state.gameCourseId==='all'?'active':''}" data-game-course="all">All data</button>
-     ${courses.map(c=>`<button class="putting-course ${state.gameCourseId===c.id?'active':''}" data-game-course="${c.id}">${courseShort(c.baseName||c.name)}${c.tees?` · ${c.tees}`:''}</button>`).join('')}
-   </div>
+   <div class="course-dropdown-wrap"><select id="gameCourseSelect" class="course-dropdown">${courseDropdownOptions(state.gameCourseId,true,'All data')}</select></div>
    <div class="game-filter-label">Rounds included</div>
    <div class="game-round-filter">
      ${['all','5','10','20'].map(n=>`<button class="game-round-btn ${String(state.gameRoundLimit)===n?'active':''}" data-game-rounds="${n}">${n==='all'?'All':`Last ${n}`}</button>`).join('')}
@@ -1104,12 +1161,15 @@ function selectRoundFromBar(id){
 }
 function render(){
  app.innerHTML=state.view==='pregame'?pregame():state.view==='memory'?memory():state.view==='rounds'?roundsView():myGame();
- document.querySelectorAll('[data-course]').forEach(b=>b.addEventListener('click',()=>{state.selectedCourseId=b.dataset.course;render()}));
+ const pc=document.getElementById('pregameCourseSelect'); if(pc)pc.addEventListener('change',()=>{state.selectedCourseId=pc.value;render()});
+ const mc=document.getElementById('memoryCourseSelect'); if(mc)mc.addEventListener('change',()=>{state.selectedCourseId=mc.value;render()});
+ const rc=document.getElementById('roundCourseSelect'); if(rc)rc.addEventListener('change',()=>{state.roundCourseId=rc.value;state.selectedRoundId=null;render()});
+ const gc=document.getElementById('gameCourseSelect'); if(gc)gc.addEventListener('change',()=>{state.gameCourseId=gc.value;render()});
+ document.querySelectorAll('[data-edit-import]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openEditRound(b.dataset.editRound)}));
+
  document.querySelectorAll('[data-round-stat]').forEach(b=>b.addEventListener('click',()=>{state.roundStat=b.dataset.roundStat;render()}));
- document.querySelectorAll('[data-round-course]').forEach(b=>b.addEventListener('click',()=>{state.roundCourseId=b.dataset.roundCourse;state.selectedRoundId=null;render()}));
  document.querySelectorAll('[data-round-filter]').forEach(b=>b.addEventListener('click',()=>{state.roundFilter=b.dataset.roundFilter;state.selectedRoundId=null;render()}));
  document.querySelectorAll('[data-round-bar]').forEach(b=>{b.addEventListener('click',()=>selectRoundFromBar(b.dataset.roundBar));b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectRoundFromBar(b.dataset.roundBar)}})});
- document.querySelectorAll('[data-game-course]').forEach(b=>b.addEventListener('click',()=>{state.gameCourseId=b.dataset.gameCourse;render()}));
  document.querySelectorAll('[data-game-rounds]').forEach(b=>b.addEventListener('click',()=>{state.gameRoundLimit=b.dataset.gameRounds;render()}));
  document.querySelectorAll('[data-chat-prompt]').forEach(b=>b.addEventListener('click',()=>sendPregameChat(b.dataset.chatPrompt)));
  const chatForm=document.getElementById('pregameChatForm');
@@ -1123,6 +1183,56 @@ function render(){
 window.setView = v => {state.view=v; render();};
 document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
 
+
+
+const editDlg=document.getElementById('editRoundDialog');
+
+function openEditRound(roundId){
+  const r=db.rounds.find(x=>String(x.id)===String(roundId));
+  if(!r || !r.supabaseImportId)return;
+  const c=course(r.courseId);
+  document.getElementById('editImportId').value=r.supabaseImportId;
+  const sel=document.getElementById('editCourse');
+  sel.innerHTML=sortedCourses().map(x=>`<option value="${x.id}" ${x.id===r.courseId?'selected':''}>${safeText(courseMenuLabel(x))}</option>`).join('');
+  document.getElementById('editTee').value=c?.tees||'';
+  document.getElementById('editDate').value=r.date||'';
+  document.getElementById('editGross').value=r.gross??'';
+  document.getElementById('editNet').value=r.net??'';
+  editDlg.showModal();
+}
+document.getElementById('closeEditRound').onclick=()=>editDlg.close();
+document.getElementById('cancelEditRound').onclick=()=>editDlg.close();
+
+document.getElementById('saveEditRound').onclick=async()=>{
+  const btn=document.getElementById('saveEditRound');
+  const id=document.getElementById('editImportId').value;
+  const selectedId=document.getElementById('editCourse').value;
+  const c=course(selectedId);
+  if(!id||!c)return;
+  const tee=document.getElementById('editTee').value.trim();
+  const sameTee=normalizeTee(tee)===normalizeTee(c.tees);
+
+  const changes={
+    date:document.getElementById('editDate').value||null,
+    course_name:c.baseName||c.name,
+    course_id:sameTee?c.id:null,
+    tees:tee||null,
+    gross_score:document.getElementById('editGross').value===''?null:Number(document.getElementById('editGross').value),
+    net_score:document.getElementById('editNet').value===''?null:Number(document.getElementById('editNet').value),
+    course_par:sameTee&&Number.isFinite(c.par)?c.par:null,
+    course_rating:sameTee&&Number.isFinite(c.rating)?c.rating:null,
+    course_slope:sameTee&&Number.isFinite(c.slope)?c.slope:null
+  };
+  try{
+    btn.disabled=true;btn.textContent='Saving…';
+    await callImportFunction({action:'update',id,changes});
+    btn.textContent='Saved ✓';
+    setTimeout(()=>location.reload(),350);
+  }catch(e){
+    alert(e.message);
+    btn.disabled=false;btn.textContent='Save Changes';
+  }
+};
 
 const dlg=document.getElementById('importDialog');
 const fileInput=document.getElementById('fileInput');
