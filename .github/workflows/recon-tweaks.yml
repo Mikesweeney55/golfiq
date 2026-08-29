@@ -1,4 +1,4 @@
-name: GolfRecon UI Tweaks
+name: GolfRecon Maintenance
 on:
   push:
     paths:
@@ -6,53 +6,81 @@ on:
 permissions:
   contents: write
 jobs:
-  tweak:
+  maintain:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply requested UI tweaks
+      - name: Fix Pregame course refresh
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p=Path('index.html')
           s=p.read_text()
-          # Navigation/theme terminology
-          s=s.replace('>Groups<','>Platoons<').replace('Groups</','Platoons</')
-          # Requested pregame heading terminology
-          s=s.replace('>Head<','>Swing Thoughts<').replace('>HEAD<','>SWING THOUGHTS<')
-          s=s.replace('Head</','Swing Thoughts</')
-          # Move What matters tomorrow card/section directly before Swing Thoughts when both are sibling blocks.
-          import re
-          # Handle common section/card blocks containing the two headings.
-          for tag in ('section','div'):
-              pat=re.compile(rf'(<{tag}[^>]*>(?:(?!</{tag}>).)*?What matters tomorrow(?:(?!</{tag}>).)*?</{tag}>)(\s*)(<{tag}[^>]*>(?:(?!</{tag}>).)*?Swing Thoughts(?:(?!</{tag}>).)*?</{tag}>)',re.S|re.I)
-              # already correct order; no action needed
-          # If Swing Thoughts precedes What matters tomorrow, swap adjacent blocks.
-          for tag in ('section','div'):
-              pat=re.compile(rf'(<{tag}[^>]*>(?:(?!</{tag}>).)*?Swing Thoughts(?:(?!</{tag}>).)*?</{tag}>)(\s*)(<{tag}[^>]*>(?:(?!</{tag}>).)*?What matters tomorrow(?:(?!</{tag}>).)*?</{tag}>)',re.S|re.I)
-              s=pat.sub(r'\3\2\1',s)
-          # Add a compact branded logo lockup to the topbar, replacing simple GR mark when present.
-          logo='''<div class="gr-brand" aria-label="GolfRecon"><div class="gr-mark"><span class="gr-cross">GR</span><span class="gr-flag">⚑</span></div><div class="gr-word"><strong>GOLFRECON</strong><small>KNOW YOUR GAME. PLAY SMARTER.</small></div></div>'''
-          # Replace likely existing brand label/mark in topbar only.
-          m=re.search(r'(<div[^>]*class="[^"]*topbar[^"]*"[^>]*>)(.*?)(</div>\s*(?:<main|<section|<div class="hero))',s,re.S|re.I)
-          if m:
-              inner=m.group(2)
-              # Replace first GolfRecon/GR brand-ish element, conservatively.
-              inner2=re.sub(r'<div[^>]*class="[^"]*(?:brand|logo)[^"]*"[^>]*>.*?</div>',logo,inner,count=1,flags=re.S|re.I)
-              if inner2==inner:
-                  inner2=re.sub(r'<[^>]+>\s*GR\s*</[^>]+>',logo,inner,count=1,flags=re.I)
-              if inner2==inner:
-                  inner2=logo+inner
-              s=s[:m.start(2)]+inner2+s[m.end(2):]
-          # CSS for the logo lockup
-          css='''.gr-brand{display:flex;align-items:center;gap:10px;justify-self:start}.gr-mark{width:48px;height:48px;border:2px solid var(--accent);border-radius:50%;display:grid;place-items:center;position:relative;background:#102019;box-shadow:inset 0 0 0 3px #102019,0 0 0 1px rgba(184,234,104,.2)}.gr-mark:before,.gr-mark:after{content:"";position:absolute;background:var(--accent);opacity:.55}.gr-mark:before{width:1px;height:100%;left:50%}.gr-mark:after{height:1px;width:100%;top:50%}.gr-cross{font-size:17px;font-weight:950;letter-spacing:-.06em;color:#f5f7f6;z-index:1}.gr-flag{position:absolute;font-size:10px;color:var(--accent);right:4px;top:4px;z-index:2}.gr-word{display:grid;line-height:1}.gr-word strong{font-size:16px;letter-spacing:.08em}.gr-word small{font-size:7px;letter-spacing:.12em;color:var(--accent);margin-top:5px;font-weight:850}@media(max-width:520px){.gr-word small{display:none}.gr-word strong{font-size:13px}.gr-mark{width:42px;height:42px}}'''
-          s=s.replace('</style>',css+'\n</style>',1)
+          old="""function setGlobalCourse(id){
+  if(!db.courses.some(c=>c.id===id))return;
+  state.selectedCourseId=id;
+  state.gameCourseId=id;
+  state.roundCourseId=id;
+  state.selectedRoundId=null;
+  try{localStorage.setItem('golfreconSelectedCourseId',id)}catch{}
+  refreshGlobalCourseSelector();
+  render();
+}"""
+          if old not in s:
+              old="""function setGlobalCourse(id){
+  if(!db.courses.some(c=>c.id===id))return;
+  state.selectedCourseId=id;
+  state.gameCourseId=id;
+  state.roundCourseId=id;
+  state.selectedRoundId=null;
+  try{localStorage.setItem('golfiqSelectedCourseId',id)}catch{}
+  refreshGlobalCourseSelector();
+  render();
+}"""
+          new="""async function setGlobalCourse(id){
+  if(!db.courses.some(c=>c.id===id))return;
+  state.selectedCourseId=id;
+  state.gameCourseId=id;
+  state.roundCourseId=id;
+  state.selectedRoundId=null;
+  try{localStorage.setItem('golfreconSelectedCourseId',id)}catch{}
+  refreshGlobalCourseSelector();
+  render();
+  try{
+    const data=await callImportFunction({action:'bootstrap'});
+    db.player=data.player||db.player;
+    db.swingThoughts=data.swingThoughts||db.swingThoughts;
+    db.courses=data.courses||db.courses;
+    db.rounds=data.rounds||db.rounds;
+    db.puttingDetails=data.puttingDetails||db.puttingDetails;
+    db.clubStats=data.clubStats||db.clubStats;
+    if(!db.courses.some(c=>c.id===id))state.selectedCourseId=db.courses[0]?.id||null;
+    if(state.gameCourseId!=='all')state.gameCourseId=state.selectedCourseId;
+    if(state.roundCourseId!=='all')state.roundCourseId=state.selectedCourseId;
+    refreshGlobalCourseSelector();
+    render();
+  }catch(e){
+    console.warn('Course refresh failed; using current synced data',e);
+  }
+}"""
+          if old not in s:
+              raise SystemExit('setGlobalCourse block not found')
+          s=s.replace(old,new,1)
+          s=s.replace("savedCourse=localStorage.getItem('golfiqSelectedCourseId')","savedCourse=localStorage.getItem('golfreconSelectedCourseId')||localStorage.getItem('golfiqSelectedCourseId')")
           p.write_text(s)
           PY
-      - name: Commit tweaks
+      - name: Verify database paths still exist
+        run: |
+          grep -q "action:'bootstrap'" index.html
+          grep -q "action:'save'" index.html
+          grep -q "action:'update'" index.html
+          grep -q "action:'delete'" index.html
+          grep -q "db.rounds" index.html
+          grep -q "puttingDetails" index.html
+      - name: Commit maintenance change
         run: |
           git config user.name "Mikesweeney55"
           git config user.email "Mikesweeney55@yahoo.com"
           git add index.html
-          git diff --cached --quiet || git commit -m "Apply GolfRecon platoon and pregame UI tweaks"
+          git diff --cached --quiet || git commit -m "Refresh Pregame data when switching courses"
           git push
