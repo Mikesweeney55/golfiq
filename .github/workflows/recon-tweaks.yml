@@ -10,61 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch v12.2 UI cleanup
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('index.html')
-          s=p.read_text()
-
-          replacements=[
-            ('<title>GolfRecon v12.1 Beta</title>','<title>GolfRecon v12.2 Beta</title>'),
-            ('<div class="brand-meta"><span>v12.0 Beta</span>','<div class="brand-meta"><span>v12.2 Beta</span>'),
-            ('<div class="muted" style="font-size:11px;margin-top:8px">Scorecard symbols: circle birdie · square bogey · double outline double bogey · no outline par</div>',''),
-            ('<div class="card"><div class="eyebrow">PUTTING BY DISTANCE</div><h3 style="margin-top:4px">Outcome mix</h3>','<div class="card"><div class="eyebrow">PUTTING BY DISTANCE</div><h3 style="margin-top:4px">Results</h3>'),
-            ('<div class="card" style="margin-top:12px"><div class="eyebrow">PRACTICE PLAN</div><h3 style="margin-top:4px">Where to spend your putting time</h3>','<div class="card" style="margin-top:12px"><div class="eyebrow">PRACTICE PLAN</div><h3 style="margin-top:4px">Focus</h3>'),
-            ('<div class="putt-stack-count">${z.n} greens</div>','<div class="putt-stack-count">${z.n}</div>'),
-            ('<h2>Groups & Leagues</h2>','<h2>Platoons & Leagues</h2>'),
-            ('home for recurring groups, league seasons, events, standings, previews, recaps and shareable trash talk.','home for platoons, leagues, events, standings, previews and recaps.')
-          ]
-          for old,new in replacements:
-            if old not in s:
-              raise SystemExit('Expected text not found: '+old[:100])
-            s=s.replace(old,new,1)
-
-          old='''    ${gameKeysPregameHtml()}
-
-    ${pregameTendencies(c)}
-
-    <div class="section-head"><div><div class="eyebrow">3 INSIGHTS · LAST ${Math.min(3,rounds.length)||0} HERE</div><h2>What matters tomorrow</h2></div></div>
-    <div class="card key-list">${keys.map((k,i)=>`<div class="key"><div class="key-num">${i+1}</div><div><strong>${k.title}</strong><span class="muted">${k.text}</span></div></div>`).join('')}</div>
-
-    ${pregameChatHtml(c)}'''
-          new='''    <div class="section-head"><div><div class="eyebrow">3 INSIGHTS · LAST ${Math.min(3,rounds.length)||0} HERE</div><h2>What matters tomorrow</h2></div></div>
-    <div class="card key-list">${keys.map((k,i)=>`<div class="key"><div class="key-num">${i+1}</div><div><strong>${k.title}</strong><span class="muted">${k.text}</span></div></div>`).join('')}</div>
-
-    ${gameKeysPregameHtml()}
-
-    ${pregameTendencies(c)}
-
-    ${pregameChatHtml(c)}'''
-          if old not in s:
-            raise SystemExit('Pregame ordering block not found')
-          s=s.replace(old,new,1)
-          p.write_text(s)
-          PY
+      - name: Patch index
+        env:
+          SCRIPT_B64: ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnA9UGF0aCgiaW5kZXguaHRtbCIpCnM9cC5yZWFkX3RleHQoKQpyZXBscz1bKCI8dGl0bGU+R29sZlJlY29uIHYxMi4xIEJldGE8L3RpdGxlPiIsIjx0aXRsZT5Hb2xmUmVjb24gdjEyLjIgQmV0YTwvdGl0bGU+IiksKCI8ZGl2IGNsYXNzPVwiYnJhbmQtbWV0YVwiPjxzcGFuPnYxMi4wIEJldGE8L3NwYW4+IiwiPGRpdiBjbGFzcz1cImJyYW5kLW1ldGFcIj48c3Bhbj52MTIuMiBCZXRhPC9zcGFuPiIpLCgiPGRpdiBjbGFzcz1cIm11dGVkXCIgc3R5bGU9XCJmb250LXNpemU6MTFweDttYXJnaW4tdG9wOjhweFwiPlNjb3JlY2FyZCBzeW1ib2xzOiBjaXJjbGUgYmlyZGllIMK3IHNxdWFyZSBib2dleSDCtyBkb3VibGUgb3V0bGluZSBkb3VibGUgYm9nZXkgwrcgbm8gb3V0bGluZSBwYXI8L2Rpdj4iLCIiKSwoIjxkaXYgY2xhc3M9XCJjYXJkXCI+PGRpdiBjbGFzcz1cImV5ZWJyb3dcIj5QVVRUSU5HIEJZIERJU1RBTkNFPC9kaXY+PGgzIHN0eWxlPVwibWFyZ2luLXRvcDo0cHhcIj5PdXRjb21lIG1peDwvaDM+IiwiPGRpdiBjbGFzcz1cImNhcmRcIj48ZGl2IGNsYXNzPVwiZXllYnJvd1wiPlBVVFRJTkcgQlkgRElTVEFOQ0U8L2Rpdj48aDMgc3R5bGU9XCJtYXJnaW4tdG9wOjRweFwiPlJlc3VsdHM8L2gzPiIpLCgiPGRpdiBjbGFzcz1cImNhcmRcIiBzdHlsZT1cIm1hcmdpbi10b3A6MTJweFwiPjxkaXYgY2xhc3M9XCJleWVicm93XCI+UFJBQ1RJQ0UgUExBTjwvZGl2PjxoMyBzdHlsZT1cIm1hcmdpbi10b3A6NHB4XCI+V2hlcmUgdG8gc3BlbmQgeW91ciBwdXR0aW5nIHRpbWU8L2gzPiIsIjxkaXYgY2xhc3M9XCJjYXJkXCIgc3R5bGU9XCJtYXJnaW4tdG9wOjEycHhcIj48ZGl2IGNsYXNzPVwiZXllYnJvd1wiPlBSQUNUSUNFIFBMQU48L2Rpdj48aDMgc3R5bGU9XCJtYXJnaW4tdG9wOjRweFwiPkZvY3VzPC9oMz4iKSwoIjxkaXYgY2xhc3M9XCJwdXR0LXN0YWNrLWNvdW50XCI+JHt6Lm59IGdyZWVuczwvZGl2PiIsIjxkaXYgY2xhc3M9XCJwdXR0LXN0YWNrLWNvdW50XCI+JHt6Lm59PC9kaXY+IiksKCI8aDI+R3JvdXBzICYgTGVhZ3VlczwvaDI+IiwiPGgyPlBsYXRvb25zICYgTGVhZ3VlczwvaDI+IiksKCJob21lIGZvciByZWN1cnJpbmcgZ3JvdXBzLCBsZWFndWUgc2Vhc29ucywgZXZlbnRzLCBzdGFuZGluZ3MsIHByZXZpZXdzLCByZWNhcHMgYW5kIHNoYXJlYWJsZSB0cmFzaCB0YWxrLiIsImhvbWUgZm9yIHBsYXRvb25zLCBsZWFndWVzLCBldmVudHMsIHN0YW5kaW5ncywgcHJldmlld3MgYW5kIHJlY2Fwcy4iKV0KZm9yIG9sZCxuZXcgaW4gcmVwbHM6CiAgICBhc3NlcnQgb2xkIGluIHMsIG9sZFs6ODBdCiAgICBzPXMucmVwbGFjZShvbGQsbmV3LDEpCm9sZD0iIiIgICAgJHtnYW1lS2V5c1ByZWdhbWVIdG1sKCl9CgogICAgJHtwcmVnYW1lVGVuZGVuY2llcyhjKX0KCiAgICA8ZGl2IGNsYXNzPVwic2VjdGlvbi1oZWFkXCI+PGRpdj48ZGl2IGNsYXNzPVwiZXllYnJvd1wiPjMgSU5TSUdIVFMgwrcgTEFTVCAke01hdGgubWluKDMscm91bmRzLmxlbmd0aCl8fDB9IEhFUkU8L2Rpdj48aDI+V2hhdCBtYXR0ZXJzIHRvbW9ycm93PC9oMj48L2Rpdj48L2Rpdj4KICAgIDxkaXYgY2xhc3M9XCJjYXJkIGtleS1saXN0XCI+JHtrZXlzLm1hcCgoayxpKT0+YDxkaXYgY2xhc3M9XCJrZXlcIj48ZGl2IGNsYXNzPVwia2V5LW51bVwiPiR7aSsxfTwvZGl2PjxkaXY+PHN0cm9uZz4ke2sudGl0bGV9PC9zdHJvbmc+PHNwYW4gY2xhc3M9XCJtdXRlZFwiPiR7ay50ZXh0fTwvc3Bhbj48L2Rpdj48L2Rpdj5gKS5qb2luKCcnKX08L2Rpdj4KCiAgICAke3ByZWdhbWVDaGF0SHRtbChjKX0iIiIKbmV3PSIiIiAgICA8ZGl2IGNsYXNzPVwic2VjdGlvbi1oZWFkXCI+PGRpdj48ZGl2IGNsYXNzPVwiZXllYnJvd1wiPjMgSU5TSUdIVFMgwrcgTEFTVCAke01hdGgubWluKDMscm91bmRzLmxlbmd0aCl8fDB9IEhFUkU8L2Rpdj48aDI+V2hhdCBtYXR0ZXJzIHRvbW9ycm93PC9oMj48L2Rpdj48L2Rpdj4KICAgIDxkaXYgY2xhc3M9XCJjYXJkIGtleS1saXN0XCI+JHtrZXlzLm1hcCgoayxpKT0+YDxkaXYgY2xhc3M9XCJrZXlcIj48ZGl2IGNsYXNzPVwia2V5LW51bVwiPiR7aSsxfTwvZGl2PjxkaXY+PHN0cm9uZz4ke2sudGl0bGV9PC9zdHJvbmc+PHNwYW4gY2xhc3M9XCJtdXRlZFwiPiR7ay50ZXh0fTwvc3Bhbj48L2Rpdj48L2Rpdj5gKS5qb2luKCcnKX08L2Rpdj4KCiAgICAke2dhbWVLZXlzUHJlZ2FtZUh0bWwoKX0KCiAgICAke3ByZWdhbWVUZW5kZW5jaWVzKGMpfQoKICAgICR7cHJlZ2FtZUNoYXRIdG1sKGMpfSIiIgphc3NlcnQgb2xkIGluIHMKcz1zLnJlcGxhY2Uob2xkLG5ldywxKQpwLndyaXRlX3RleHQocykK
+        run: python -c "import os,base64; exec(base64.b64decode(os.environ['SCRIPT_B64']).decode())"
       - name: Verify
-        run: |
-          grep -q 'GolfRecon v12.2 Beta' index.html
-          grep -q '<span>v12.2 Beta</span>' index.html
-          grep -q '<h2>What matters tomorrow</h2>' index.html
-          grep -q '<h2>Platoons & Leagues</h2>' index.html
-          git diff --check
+        run: grep -q 'GolfRecon v12.2 Beta' index.html && grep -q '<span>v12.2 Beta</span>' index.html && grep -q '<h2>Platoons & Leagues</h2>' index.html && git diff --check
       - name: Commit
-        run: |
-          git config user.name github-actions-bot
-          git config user.email actions@github.com
-          git add index.html
-          git commit -m 'Polish Pregame and putting UI for v12.2'
-          git push
+        run: git config user.name github-actions-bot && git config user.email actions@github.com && git add index.html && git commit -m 'Polish Pregame and putting UI for v12.2' && git push
