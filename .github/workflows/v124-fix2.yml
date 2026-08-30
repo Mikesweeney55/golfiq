@@ -1,4 +1,4 @@
-name: GolfRecon v12.6 Directional Data Fix
+name: GolfRecon v12.7 Directional Review UI
 on:
   push:
     branches: [main]
@@ -16,46 +16,31 @@ jobs:
           from pathlib import Path
           p=Path('index.html')
           s=p.read_text()
-          assert '<title>GolfRecon v12.5 Beta</title>' in s
-          assert '<span>v12.5 Beta</span>' in s
-          s=s.replace('<title>GolfRecon v12.5 Beta</title>','<title>GolfRecon v12.6 Beta</title>',1)
-          s=s.replace('<span>v12.5 Beta</span>','<span>v12.6 Beta</span>',1)
-          marker='function weightedDistribution(courseId,key){'
-          lines=[
-            'function applyDirectionalDataFromImports(imports){',
-            '  for(const row of (imports||[])){',
-            "    const pr=row?.parsed?.round||row?.parsed;",
-            '    if(!pr)continue;',
-            "    let r=db.rounds.find(x=>String(x.supabaseImportId||'')===String(row.id||''));",
-            '    if(!r){',
-            '      r=db.rounds.find(x=>{',
-            '        const c=course(x.courseId);',
-            "        return String(x.date||'')===String(pr.date||'') && Number(x.gross)===Number(pr.gross_score??pr.gross) && normalizeCourseName(c?.name||c?.baseName)===normalizeCourseName(pr.course_name);",
-            '      });',
-            '    }',
-            '    if(!r)continue;',
-            '    const fd=pr.fairway_distribution;',
-            '    if(fd)r.fairwayDistribution={hitPct:Number(fd.hit_pct)||0,missLeftPct:Number(fd.left_pct)||0,missRightPct:Number(fd.right_pct)||0,missShortPct:Number(fd.short_pct)||0,missLongPct:Number(fd.long_pct)||0,missFairwaysHitPct:Number(fd.other_pct)||0};',
-            '    const gd=pr.gir_distribution;',
-            '    if(gd)r.girDistribution={hitPct:Number(gd.hit_pct)||0,missShortPct:Number(gd.short_pct)||0,missLeftPct:Number(gd.left_pct)||0,missRightPct:Number(gd.right_pct)||0,missLongPct:Number(gd.long_pct)||0,missGirPct:Number(gd.other_pct)||0,noChancePct:Number(gd.no_chance_pct)||0};',
-            '  }',
-            '}',
-            ''
-          ]
-          helper='\n'.join(lines)+'\n'
+          assert '<title>GolfRecon v12.6 Beta</title>' in s
+          assert '<span>v12.6 Beta</span>' in s
+          s=s.replace('<title>GolfRecon v12.6 Beta</title>','<title>GolfRecon v12.7 Beta</title>',1)
+          s=s.replace('<span>v12.6 Beta</span>','<span>v12.7 Beta</span>',1)
+
+          marker='function reviewHtml(x){'
+          helper=r'''function directionalReviewHtml(r){
+  const pct=v=>v===null||v===undefined||v===''?'—':`${Number(v).toFixed(Number(v)%1?1:0)}%`;
+  const fd=r?.fairway_distribution, gd=r?.gir_distribution;
+  if(!fd && !gd)return '';
+  const row=(label,v)=>`<div class="import-kpi"><div class="k">${label}</div><div class="v">${pct(v)}</div></div>`;
+  return `<div class="section-head" style="margin-top:16px"><div><div class="eyebrow">DIRECTIONAL DATA</div><h3>Miss patterns found</h3></div></div>
+    ${fd?`<div class="backfill-note" style="margin-bottom:8px"><strong>Fairways</strong></div><div class="import-summary">${row('Hit',fd.hit_pct)}${row('Left',fd.left_pct)}${row('Right',fd.right_pct)}${row('Short',fd.short_pct)}${row('Long',fd.long_pct)}</div>`:''}
+    ${gd?`<div class="backfill-note" style="margin:12px 0 8px"><strong>GIR</strong></div><div class="import-summary">${row('Hit',gd.hit_pct)}${row('Short',gd.short_pct)}${row('Left',gd.left_pct)}${row('Right',gd.right_pct)}${row('Long',gd.long_pct)}${row('Other',gd.other_pct)}</div>`:''}`;
+}
+'''
           assert marker in s
           s=s.replace(marker,helper+marker,1)
-          old="    db.rounds=data.rounds||[];\n    db.puttingDetails=data.puttingDetails||[];\n    db.clubStats=data.clubStats||[];"
-          new=old+"\n    try{const rawImports=await callImportFunction({action:'list'});applyDirectionalDataFromImports(rawImports.imports||[])}catch(e){console.warn('Directional import hydration failed',e)}"
-          assert old in s
-          s=s.replace(old,new,1)
-          old2="    db.rounds=data.rounds||db.rounds;\n    db.puttingDetails=data.puttingDetails||db.puttingDetails;\n    db.clubStats=data.clubStats||db.clubStats;"
-          new2=old2+"\n    try{const rawImports=await callImportFunction({action:'list'});applyDirectionalDataFromImports(rawImports.imports||[])}catch(e){console.warn('Directional import hydration failed',e)}"
-          assert old2 in s
-          s=s.replace(old2,new2,1)
+
+          needle="    ${holes.length?`<div style=\"overflow-x:auto\"><table class=\"import-hole-table\">"
+          assert needle in s
+          s=s.replace(needle,"    ${directionalReviewHtml(r)}\n"+needle,1)
           p.write_text(s)
           PY
       - name: Verify
-        run: grep -q 'GolfRecon v12.6 Beta' index.html && grep -q 'applyDirectionalDataFromImports' index.html
+        run: grep -q 'GolfRecon v12.7 Beta' index.html && grep -q 'DIRECTIONAL DATA' index.html && grep -q 'directionalReviewHtml(r)' index.html
       - name: Commit
-        run: git config user.name github-actions-bot && git config user.email actions@github.com && git add index.html && git commit -m 'Hydrate directional miss data for v12.6' && git push
+        run: git config user.name github-actions-bot && git config user.email actions@github.com && git add index.html && git commit -m 'Show directional data in backfill review for v12.7' && git push
