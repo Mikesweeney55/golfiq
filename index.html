@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfRecon v12.1 Beta</title>
+  <title>GolfRecon v12.2 Beta</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -413,7 +413,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div class="topbar-left">
         <div class="gr-brand" aria-label="GolfRecon"><div class="gr-mark"><span class="gr-cross">GR</span><span class="gr-flag">⚑</span></div><div class="gr-word"><strong>GOLFRECON</strong><small>KNOW YOUR GAME. PLAY SMARTER.</small></div></div>
-        <div class="brand-meta"><span>v12.0 Beta</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
+        <div class="brand-meta"><span>v12.2 Beta</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
       </div>
 
       <div class="giq-logo" aria-label="GR">
@@ -1120,12 +1120,12 @@ function pregame(){
       </div></div>
     </section>
 
+    <div class="section-head"><div><div class="eyebrow">3 INSIGHTS · LAST ${Math.min(3,rounds.length)||0} HERE</div><h2>What matters tomorrow</h2></div></div>
+    <div class="card key-list">${keys.map((k,i)=>`<div class="key"><div class="key-num">${i+1}</div><div><strong>${k.title}</strong><span class="muted">${k.text}</span></div></div>`).join('')}</div>
+
     ${gameKeysPregameHtml()}
 
     ${pregameTendencies(c)}
-
-    <div class="section-head"><div><div class="eyebrow">3 INSIGHTS · LAST ${Math.min(3,rounds.length)||0} HERE</div><h2>What matters tomorrow</h2></div></div>
-    <div class="card key-list">${keys.map((k,i)=>`<div class="key"><div class="key-num">${i+1}</div><div><strong>${k.title}</strong><span class="muted">${k.text}</span></div></div>`).join('')}</div>
 
     ${pregameChatHtml(c)}
 
@@ -1136,7 +1136,7 @@ function pregame(){
     ${latest?`<div class="section-head"><div><div class="eyebrow">LAST TIME HERE</div><h2>${fmtDate(latest.date)} · ${latest.gross}</h2></div></div>
     <div class="card">
       <div class="score-strip">${latest.scores.map((s,i)=>`<div class="score-box ${scoreClass(s,c.pars[i])}" title="Hole ${c.holeNumbers?.[i]??i+1} · Par ${c.pars[i]}">${s}</div>`).join('')}</div>
-      <div class="muted" style="font-size:11px;margin-top:8px">Scorecard symbols: circle birdie · square bogey · double outline double bogey · no outline par</div>
+      
     </div>`:''}
   `;
 }
@@ -1186,11 +1186,11 @@ function courseMemorySection(courseId){
   <div class="hole-grid">${mem.length?mem.map(renderHoleCard).join(''):'<div class="card muted">No hole-by-hole memory yet for this course.</div>'}</div>`;
 }
 function groupsView(){
-  return `<div class="section-head"><div><div class="eyebrow">SOCIAL GOLF</div><h2>Groups & Leagues</h2></div></div>
+  return `<div class="section-head"><div><div class="eyebrow">SOCIAL GOLF</div><h2>Platoons & Leagues</h2></div></div>
   <div class="card groups-hero">
     <span class="coming-badge">BUILDING NEXT</span>
     <h2 style="margin:10px 0 6px">Golf is better with your crew.</h2>
-    <div class="muted">This will become the home for recurring groups, league seasons, events, standings, previews, recaps and shareable trash talk.</div>
+    <div class="muted">This will become the home for platoons, leagues, events, standings, previews and recaps.</div>
     <div class="groups-grid">
       <div class="card group-feature"><span>👥</span><h3>Platoons</h3><div class="muted">Create a crew, invite golfers and keep shared history.</div></div>
       <div class="card group-feature"><span>🏆</span><h3>Leagues</h3><div class="muted">Schedules, handicaps, standings and season-long competitions.</div></div>
@@ -1325,7 +1325,7 @@ function puttingOutcomeGrid(p){
       {cls:'four',v:100*z.four/z.n,label:'4+'}
     ];
     const segs=vals.filter(x=>x.v>0).map(x=>`<div class="putt-seg ${x.cls}" style="height:${x.v}%">${x.v>=12?Math.round(x.v)+'%':''}</div>`).join('');
-    return `<div class="putt-stack-col"><div class="putt-stack-bar">${segs}</div><div class="putt-stack-label ${puttingRowTone(z)}">${z.label}</div><div class="putt-stack-count">${z.n} greens</div></div>`;
+    return `<div class="putt-stack-col"><div class="putt-stack-bar">${segs}</div><div class="putt-stack-label ${puttingRowTone(z)}">${z.label}</div><div class="putt-stack-count">${z.n}</div></div>`;
   }).join('');
   return `<div class="putt-stack-wrap"><div class="putt-stack-chart">${cols}</div></div>
   <div class="putt-stack-legend"><span class="putt-legend-item"><span class="putt-legend-swatch" style="background:#4f9df7"></span>1 putt</span><span class="putt-legend-item"><span class="putt-legend-swatch" style="background:#55c878"></span>2 putts</span><span class="putt-legend-item"><span class="putt-legend-swatch" style="background:#ef6461"></span>3+ putts</span></div>`;
@@ -1347,8 +1347,8 @@ function heatMap(){
  const practice=ranked.filter(z=>z.priority>0).slice(0,3);
  const practiceHtml=practice.length?practice.map((z,i)=>`<div class="practice-item"><div class="practice-rank">${i+1}</div><div><strong>${z.label}</strong><div class="why">${z.why}</div></div><div class="practice-score">${z.priority>20?'High':z.priority>9?'Med':'Low'} focus</div></div>`).join(''):`<div class="muted">No clear putting weakness in the available sample.</div>`;
  return `<div class="putting-summary"><div class="card"><div class="metric-label">Greens tracked</div><div class="metric">${total}</div></div><div class="card"><div class="metric-label">1-putts</div><div class="metric">${ones}</div><div class="muted">${total?Math.round(100*ones/total):0}%</div></div><div class="card"><div class="metric-label">3+ putts</div><div class="metric">${threes}</div></div><div class="card"><div class="metric-label">Best zone</div><div class="metric" style="font-size:20px">${best?.label||'—'}</div><div class="muted">${best?(best.sg>=0?'+':'')+best.sg.toFixed(2)+' SG':'—'}</div></div></div>
- <div class="card"><div class="eyebrow">PUTTING BY DISTANCE</div><h3 style="margin-top:4px">Outcome mix</h3>${puttingOutcomeGrid(p)}</div>
- <div class="card" style="margin-top:12px"><div class="eyebrow">PRACTICE PLAN</div><h3 style="margin-top:4px">Where to spend your putting time</h3><div class="practice-focus">${practiceHtml}</div></div>`;
+ <div class="card"><div class="eyebrow">PUTTING BY DISTANCE</div><h3 style="margin-top:4px">Results</h3>${puttingOutcomeGrid(p)}</div>
+ <div class="card" style="margin-top:12px"><div class="eyebrow">PRACTICE PLAN</div><h3 style="margin-top:4px">Focus</h3><div class="practice-focus">${practiceHtml}</div></div>`;
 }
 
 
