@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfRecon v12.5 Beta</title>
+  <title>GolfRecon v12.6 Beta</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -418,7 +418,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div class="topbar-left">
         <div class="gr-brand" aria-label="GolfRecon"><div class="gr-mark"><span class="gr-cross">GR</span><span class="gr-flag">⚑</span></div><div class="gr-word"><strong>GOLFRECON</strong><small>KNOW YOUR GAME. PLAY SMARTER.</small></div></div>
-        <div class="brand-meta"><span>v12.5 Beta</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
+        <div class="brand-meta"><span>v12.6 Beta</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
       </div>
 
       <div class="giq-logo" aria-label="GR">
@@ -698,6 +698,25 @@ function puttingForCourse(c){
 function puttingCourseOptions(){
   return [...new Set(db.puttingDetails.map(p=>p.course))].sort((a,b)=>a.localeCompare(b));
 }
+function applyDirectionalDataFromImports(imports){
+  for(const row of (imports||[])){
+    const pr=row?.parsed?.round||row?.parsed;
+    if(!pr)continue;
+    let r=db.rounds.find(x=>String(x.supabaseImportId||'')===String(row.id||''));
+    if(!r){
+      r=db.rounds.find(x=>{
+        const c=course(x.courseId);
+        return String(x.date||'')===String(pr.date||'') && Number(x.gross)===Number(pr.gross_score??pr.gross) && normalizeCourseName(c?.name||c?.baseName)===normalizeCourseName(pr.course_name);
+      });
+    }
+    if(!r)continue;
+    const fd=pr.fairway_distribution;
+    if(fd)r.fairwayDistribution={hitPct:Number(fd.hit_pct)||0,missLeftPct:Number(fd.left_pct)||0,missRightPct:Number(fd.right_pct)||0,missShortPct:Number(fd.short_pct)||0,missLongPct:Number(fd.long_pct)||0,missFairwaysHitPct:Number(fd.other_pct)||0};
+    const gd=pr.gir_distribution;
+    if(gd)r.girDistribution={hitPct:Number(gd.hit_pct)||0,missShortPct:Number(gd.short_pct)||0,missLeftPct:Number(gd.left_pct)||0,missRightPct:Number(gd.right_pct)||0,missLongPct:Number(gd.long_pct)||0,missGirPct:Number(gd.other_pct)||0,noChancePct:Number(gd.no_chance_pct)||0};
+  }
+}
+
 function weightedDistribution(courseId,key){
   const rs=roundsFor(courseId).filter(r=>r[key]);
   if(!rs.length)return null;
@@ -859,6 +878,7 @@ async function setGlobalCourse(id){
     db.rounds=data.rounds||db.rounds;
     db.puttingDetails=data.puttingDetails||db.puttingDetails;
     db.clubStats=data.clubStats||db.clubStats;
+    try{const rawImports=await callImportFunction({action:'list'});applyDirectionalDataFromImports(rawImports.imports||[])}catch(e){console.warn('Directional import hydration failed',e)}
     if(!db.courses.some(c=>c.id===id)) state.selectedCourseId=db.courses[0]?.id||null;
     if(state.gameCourseId!=='all') state.gameCourseId=state.selectedCourseId;
     if(state.roundCourseId!=='all') state.roundCourseId=state.selectedCourseId;
@@ -1870,6 +1890,7 @@ async function bootstrapGolfRecon(){
     db.rounds=data.rounds||[];
     db.puttingDetails=data.puttingDetails||[];
     db.clubStats=data.clubStats||[];
+    try{const rawImports=await callImportFunction({action:'list'});applyDirectionalDataFromImports(rawImports.imports||[])}catch(e){console.warn('Directional import hydration failed',e)}
     const userChip=document.getElementById('userChip');
     if(userChip)userChip.textContent='@'+(db.player.username||db.player.name||'golfer');
 
