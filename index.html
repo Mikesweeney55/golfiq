@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfRecon v12.4 Beta</title>
+  <title>GolfRecon v12.5 Beta</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -418,7 +418,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div class="topbar-left">
         <div class="gr-brand" aria-label="GolfRecon"><div class="gr-mark"><span class="gr-cross">GR</span><span class="gr-flag">⚑</span></div><div class="gr-word"><strong>GOLFRECON</strong><small>KNOW YOUR GAME. PLAY SMARTER.</small></div></div>
-        <div class="brand-meta"><span>v12.4 Beta</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
+        <div class="brand-meta"><span>v12.5 Beta</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
       </div>
 
       <div class="giq-logo" aria-label="GR">
@@ -1222,8 +1222,8 @@ const roundStatDefs={
  score:{label:'Score',short:'Score',domain:[70,100],value:r=>r.holes===18?r.gross:null,better:'low',fmt:v=>Math.round(v)},
  scoreToPar:{label:'Score vs par',short:'Vs Par',domain:[0,25],value:r=>r.scoreToPar,better:'low',fmt:v=>(v>=0?'+':'')+Math.round(v)},
  differential:{label:'Score differential',short:'Score Differential',domain:[0,25],value:r=>scoreDifferential(r),better:'low',fmt:v=>v.toFixed(1)},
- gir:{label:'Greens in regulation',short:'GIR',domain:[0,100],value:r=>{const a=(r.gir||[]).filter(validBinaryStat);return a.length?100*sum(a)/a.length:null},better:'high',fmt:v=>Math.round(v)+'%'},
- fairways:{label:'Fairways hit',short:'Fairways',domain:[0,100],value:r=>{const a=(r.fairways||[]).filter(validBinaryStat);return a.length?100*sum(a)/a.length:null},better:'high',fmt:v=>Math.round(v)+'%'},
+ gir:{label:'Greens in regulation',short:'GIR',domain:[0,100],value:r=>{const a=(r.gir||[]).map(binaryStatValue).filter(v=>v!=null);return a.length?100*sum(a)/a.length:null},better:'high',fmt:v=>Math.round(v)+'%'},
+ fairways:{label:'Fairways hit',short:'Fairways',domain:[0,100],value:r=>{const a=(r.fairways||[]).map(binaryStatValue).filter(v=>v!=null);return a.length?100*sum(a)/a.length:null},better:'high',fmt:v=>Math.round(v)+'%'},
  putts:{label:'Putts',short:'Putting',domain:[20,45],value:r=>r.holes===18?sum(r.putts):null,better:'low',fmt:v=>Math.round(v)},
  chips:{label:'Chip shots',short:'Chipping',domain:[0,20],value:r=>r.holes===18?sum(r.chips):null,better:'low',fmt:v=>Math.round(v)},
  penalties:{label:'Penalty strokes',short:'Penalties',domain:[0,6],value:r=>r.holes===18?sum(r.penalties):null,better:'low',fmt:v=>Math.round(v)},
@@ -1496,7 +1496,15 @@ const backfillUploadStep=document.getElementById('backfillUploadStep');
 const backfillReviewStep=document.getElementById('backfillReviewStep');
 const backfillReview=document.getElementById('backfillReview');
 
-function validBinaryStat(v){return v===true||v===false||v===1||v===0}
+function binaryStatValue(v){
+  if(v===true||v===1||v==='1')return 1;
+  if(v===false||v===0||v==='0')return 0;
+  const x=String(v??'').trim().toLowerCase();
+  if(x==='true'||x==='hit')return 1;
+  if(x==='false'||x==='miss')return 0;
+  return null;
+}
+function validBinaryStat(v){return binaryStatValue(v)!=null}
 function validCountStat(v){return String(v??'').trim()!=='' && Number.isFinite(Number(v))}
 function missingRoundStats(r){
   const c=course(r.courseId);
