@@ -1,4 +1,4 @@
-name: GolfRecon v12.5 Stat Fix
+name: GolfRecon v12.6 Directional Data Fix
 on:
   push:
     branches: [main]
@@ -16,33 +16,84 @@ jobs:
           from pathlib import Path
           p=Path('index.html')
           s=p.read_text()
-          assert '<title>GolfRecon v12.4 Beta</title>' in s
-          assert '<span>v12.4 Beta</span>' in s
-          s=s.replace('<title>GolfRecon v12.4 Beta</title>','<title>GolfRecon v12.5 Beta</title>',1)
-          s=s.replace('<span>v12.4 Beta</span>','<span>v12.5 Beta</span>',1)
+          assert '<title>GolfRecon v12.5 Beta</title>' in s
+          assert '<span>v12.5 Beta</span>' in s
+          s=s.replace('<title>GolfRecon v12.5 Beta</title>','<title>GolfRecon v12.6 Beta</title>',1)
+          s=s.replace('<span>v12.5 Beta</span>','<span>v12.6 Beta</span>',1)
 
-          old="function validBinaryStat(v){return v===true||v===false||v===1||v===0}"
-          new="""function binaryStatValue(v){
-            if(v===true||v===1||v==='1')return 1;
-            if(v===false||v===0||v==='0')return 0;
-            const x=String(v??'').trim().toLowerCase();
-            if(x==='true'||x==='hit')return 1;
-            if(x==='false'||x==='miss')return 0;
-            return null;
-          }
-          function validBinaryStat(v){return binaryStatValue(v)!=null}"""
+          marker="function weightedDistribution(courseId,key){"
+          helper="""function applyDirectionalDataFromImports(imports){
+  for(const row of (imports||[])){
+    const pr=row?.parsed?.round||row?.parsed;
+    if(!pr)continue;
+    let r=db.rounds.find(x=>String(x.supabaseImportId||'')===String(row.id||''));
+    if(!r){
+      r=db.rounds.find(x=>{
+        const c=course(x.courseId);
+        return String(x.date||'')===String(pr.date||'') &&
+          Number(x.gross)===Number(pr.gross_score??pr.gross) &&
+          normalizeCourseName(c?.name||c?.baseName)===normalizeCourseName(pr.course_name);
+      });
+    }
+    if(!r)continue;
+    const fd=pr.fairway_distribution;
+    if(fd){
+      r.fairwayDistribution={
+        hitPct:Number(fd.hit_pct)||0,
+        missLeftPct:Number(fd.left_pct)||0,
+        missRightPct:Number(fd.right_pct)||0,
+        missShortPct:Number(fd.short_pct)||0,
+        missLongPct:Number(fd.long_pct)||0,
+        missFairwaysHitPct:Number(fd.other_pct)||0
+      };
+    }
+    const gd=pr.gir_distribution;
+    if(gd){
+      r.girDistribution={
+        hitPct:Number(gd.hit_pct)||0,
+        missShortPct:Number(gd.short_pct)||0,
+        missLeftPct:Number(gd.left_pct)||0,
+        missRightPct:Number(gd.right_pct)||0,
+        missLongPct:Number(gd.long_pct)||0,
+        missGirPct:Number(gd.other_pct)||0,
+        noChancePct:Number(gd.no_chance_pct)||0
+      };
+    }
+  }
+}
+
+"""
+          assert marker in s
+          s=s.replace(marker,helper+marker,1)
+
+          old="""    db.rounds=data.rounds||[];
+    db.puttingDetails=data.puttingDetails||[];
+    db.clubStats=data.clubStats||[];"""
+          new="""    db.rounds=data.rounds||[];
+    db.puttingDetails=data.puttingDetails||[];
+    db.clubStats=data.clubStats||[];
+    try{
+      const rawImports=await callImportFunction({action:'list'});
+      applyDirectionalDataFromImports(rawImports.imports||[]);
+    }catch(e){console.warn('Directional import hydration failed',e)}"""
           assert old in s
           s=s.replace(old,new,1)
 
-          old_gir="gir:{label:'Greens in regulation',short:'GIR',domain:[0,100],value:r=>{const a=(r.gir||[]).filter(validBinaryStat);return a.length?100*sum(a)/a.length:null},better:'high',fmt:v=>Math.round(v)+'%'},"
-          new_gir="gir:{label:'Greens in regulation',short:'GIR',domain:[0,100],value:r=>{const a=(r.gir||[]).map(binaryStatValue).filter(v=>v!=null);return a.length?100*sum(a)/a.length:null},better:'high',fmt:v=>Math.round(v)+'%'},"
-          old_fw="fairways:{label:'Fairways hit',short:'Fairways',domain:[0,100],value:r=>{const a=(r.fairways||[]).filter(validBinaryStat);return a.length?100*sum(a)/a.length:null},better:'high',fmt:v=>Math.round(v)+'%'},"
-          new_fw="fairways:{label:'Fairways hit',short:'Fairways',domain:[0,100],value:r=>{const a=(r.fairways||[]).map(binaryStatValue).filter(v=>v!=null);return a.length?100*sum(a)/a.length:null},better:'high',fmt:v=>Math.round(v)+'%'},"
-          assert old_gir in s and old_fw in s
-          s=s.replace(old_gir,new_gir,1).replace(old_fw,new_fw,1)
+          old2="""    db.rounds=data.rounds||db.rounds;
+    db.puttingDetails=data.puttingDetails||db.puttingDetails;
+    db.clubStats=data.clubStats||db.clubStats;"""
+          new2="""    db.rounds=data.rounds||db.rounds;
+    db.puttingDetails=data.puttingDetails||db.puttingDetails;
+    db.clubStats=data.clubStats||db.clubStats;
+    try{
+      const rawImports=await callImportFunction({action:'list'});
+      applyDirectionalDataFromImports(rawImports.imports||[]);
+    }catch(e){console.warn('Directional import hydration failed',e)}"""
+          assert old2 in s
+          s=s.replace(old2,new2,1)
           p.write_text(s)
           PY
       - name: Verify
-        run: grep -q 'GolfRecon v12.5 Beta' index.html && grep -q 'binaryStatValue' index.html && grep -q 'map(binaryStatValue)' index.html
+        run: grep -q 'GolfRecon v12.6 Beta' index.html && grep -q 'applyDirectionalDataFromImports' index.html && grep -q "action:'list'" index.html
       - name: Commit
-        run: git config user.name github-actions-bot && git config user.email actions@github.com && git add index.html && git commit -m 'Normalize FIR GIR values for v12.5' && git push
+        run: git config user.name github-actions-bot && git config user.email actions@github.com && git add index.html && git commit -m 'Hydrate directional miss data for v12.6' && git push
