@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfRecon v12.2 Beta</title>
+  <title>GolfRecon v12.3 Beta</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -277,6 +277,11 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
 .course-dropdown-wrap::after{content:'⌄';position:absolute;right:14px;top:50%;transform:translateY(-54%);pointer-events:none;color:var(--accent);font-size:18px;font-weight:900}
 .edit-round-btn{border:1px solid var(--line);background:#16251f;color:var(--text);border-radius:999px;padding:6px 9px;font-size:10px;font-weight:850;white-space:nowrap}
 .edit-round-btn:hover{border-color:rgba(184,234,104,.45)}
+.round-status-row{margin-top:6px}
+.round-status{display:inline-flex;align-items:center;border-radius:999px;padding:3px 7px;font-size:9px;font-weight:900;letter-spacing:.01em;border:1px solid var(--line)}
+.round-status.complete{color:var(--accent);background:rgba(184,234,104,.07);border-color:rgba(184,234,104,.22)}
+.round-status.warn{color:#ffd66b;background:rgba(255,214,107,.07);border-color:rgba(255,214,107,.22)}
+.round-status.missing{color:#ff9b96;background:rgba(255,59,48,.07);border-color:rgba(255,59,48,.20)}
 .round-summary.has-edit{grid-template-columns:minmax(150px,1fr) .30fr .48fr auto}
 .edit-form{display:grid;gap:11px}
 .edit-form label{display:grid;gap:5px;font-size:11px;color:var(--muted);font-weight:800}
@@ -413,7 +418,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div class="topbar-left">
         <div class="gr-brand" aria-label="GolfRecon"><div class="gr-mark"><span class="gr-cross">GR</span><span class="gr-flag">⚑</span></div><div class="gr-word"><strong>GOLFRECON</strong><small>KNOW YOUR GAME. PLAY SMARTER.</small></div></div>
-        <div class="brand-meta"><span>v12.2 Beta</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
+        <div class="brand-meta"><span>v12.3 Beta</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
       </div>
 
       <div class="giq-logo" aria-label="GR">
@@ -1254,7 +1259,7 @@ function roundsView(){
  <div class="stat-tabs">${Object.entries(roundStatDefs).map(([k,x])=>`<button class="stat-tab ${k===key?'active':''}" data-round-stat="${k}">${x.short}</button>`).join('')}</div>
  <div class="filter-tabs"><button class="filter-tab ${state.roundFilter==='18'?'active':''}" data-round-filter="18">18 holes</button><button class="filter-tab ${state.roundFilter==='all'?'active':''}" data-round-filter="all">All</button><button class="filter-tab ${state.roundFilter==='9'?'active':''}" data-round-filter="9">9 holes</button></div>
  ${roundsChart(sorted,key)}
- <div class="section-head"><div><div class="eyebrow">ROUND LIST</div><h2>${selectedCourse?(selectedCourse.baseName||selectedCourse.name):'Score by round'}</h2></div></div><div class="card">${sorted.map(r=>{const c=course(r.courseId),diff=scoreDifferential(r),sel=String(state.selectedRoundId)===String(r.id);return `<div class="round-row round-summary has-edit ${sel?'selected':''}" data-round-row="${r.id}"><div><strong>${c.name}</strong><div class="muted">${fmtDate(r.date)} · ${c.tees} tees · Par ${c.par??'—'} · ${r.holes} holes</div></div><div class="score-big">${r.gross}${sel&&Number.isFinite(c.par)?`<span class="score-over">${r.gross-c.par>=0?'+':''}${r.gross-c.par}</span>`:''}</div><div><span class="badge">Diff ${diff==null?'—':diff.toFixed(1)}</span></div><button class="edit-round-btn" data-round-action="${r.id}" type="button">${r.supabaseImportId?'Edit':'Add Stats'}</button></div>`}).join('')}</div>
+ <div class="section-head"><div><div class="eyebrow">ROUND LIST</div><h2>${selectedCourse?(selectedCourse.baseName||selectedCourse.name):'Score by round'}</h2></div></div><div class="card">${sorted.map(r=>{const c=course(r.courseId),diff=scoreDifferential(r),sel=String(state.selectedRoundId)===String(r.id),g=missingRoundStats(r),basicMissing=g.fw+g.gir+g.putts,status=basicMissing?`<span class="round-status missing">Missing stats</span>`:g.firstPutts?`<span class="round-status warn">Putt detail missing</span>`:`<span class="round-status complete">Complete ✓</span>`;return `<div class="round-row round-summary has-edit ${sel?'selected':''}" data-round-row="${r.id}"><div><strong>${c.name}</strong><div class="muted">${fmtDate(r.date)} · ${c.tees} tees · Par ${c.par??'—'} · ${r.holes} holes</div><div class="round-status-row">${status}</div></div><div class="score-big">${r.gross}${sel&&Number.isFinite(c.par)?`<span class="score-over">${r.gross-c.par>=0?'+':''}${r.gross-c.par}</span>`:''}</div><div><span class="badge">Diff ${diff==null?'—':diff.toFixed(1)}</span></div><button class="edit-round-btn" data-round-action="${r.id}" type="button">Edit</button></div>`}).join('')}</div>
  ${selectedCourse?courseMemorySection(selectedCourse.id):''}`;
 }
 
@@ -1372,12 +1377,6 @@ function myGame(){
  const roundLabel=state.gameRoundLimit==='all'?'All rounds':`Last ${state.gameRoundLimit} rounds`;
  return `<div class="section-head"><div><div class="eyebrow">PLAYER MODEL</div><h2>My Game</h2></div></div>
 
- <div class="section-head"><div><div class="eyebrow">SWING THOUGHTS</div><h2>My Game Keys</h2></div></div>
- <div class="swing-grid">
-   ${[['driver','Driver','Your top driver thoughts'],['irons','Irons','Your top iron thoughts'],['chipping','Chipping','Your short-game cues'],['putting','Putting','Your putting cues']].map(([k,label,hint])=>`<div class="card swing-card"><h3>${label}</h3><p>${hint} · one per line · top 3</p><textarea data-swing-input="${k}" placeholder="Add up to 3 thoughts...">${swingTextareaValue(k)}</textarea></div>`).join('')}
- </div>
- <div class="swing-save-row"><span id="swingSaveStatus" class="swing-save-status">These will appear in Pregame.</span><button id="saveSwingThoughts" class="button primary" type="button">Save Game Keys</button></div>
-
  <div class="game-filter-block">
    <div class="game-filter-label">Data</div>
    <div class="scope-toggle">
@@ -1397,6 +1396,13 @@ function myGame(){
    <div class="card"><div class="metric-label">GIR</div><div class="metric">${ps.gir==null?'—':ps.gir+'%'}</div></div>
    <div class="card"><div class="metric-label">Putts / round</div><div class="metric">${ps.putts==null?'—':ps.putts.toFixed(1)}</div></div>
  </div>
+
+ <div class="section-head"><div><div class="eyebrow">SWING THOUGHTS</div><h2>My Game Keys</h2></div></div>
+ <div class="swing-grid">
+   ${[['driver','Driver','Your top driver thoughts'],['irons','Irons','Your top iron thoughts'],['chipping','Chipping','Your short-game cues'],['putting','Putting','Your putting cues']].map(([k,label,hint])=>`<div class="card swing-card"><h3>${label}</h3><p>${hint} · one per line · top 3</p><textarea data-swing-input="${k}" placeholder="Add up to 3 thoughts...">${swingTextareaValue(k)}</textarea></div>`).join('')}
+ </div>
+ <div class="swing-save-row"><span id="swingSaveStatus" class="swing-save-status">These will appear in Pregame.</span><button id="saveSwingThoughts" class="button primary" type="button">Save Game Keys</button></div>
+
 
  <div class="mygame-accuracy">
    <div class="section-head"><div><div class="eyebrow">SHOT PATTERNS</div><h2>Fairways & GIR</h2></div></div>
