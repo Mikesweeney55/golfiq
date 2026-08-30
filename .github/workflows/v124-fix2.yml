@@ -1,0 +1,58 @@
+name: GolfRecon v12.4 Stat Fix
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/v124-fix2.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch index
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text()
+          assert '<title>GolfRecon v12.3 Beta</title>' in s
+          assert '<span>v12.3 Beta</span>' in s
+          s = s.replace('<title>GolfRecon v12.3 Beta</title>','<title>GolfRecon v12.4 Beta</title>',1)
+          s = s.replace('<span>v12.3 Beta</span>','<span>v12.4 Beta</span>',1)
+
+          pattern = r"function missingRoundStats\(r\)\{.*?\n\}"
+          replacement = """function validBinaryStat(v){return v===true||v===false||v===1||v===0}
+          function validCountStat(v){return String(v??'').trim()!=='' && Number.isFinite(Number(v))}
+          function missingRoundStats(r){
+            const c=course(r.courseId);
+            const n=r.holes||c?.holeNumbers?.length||0;
+            const pars=c?.pars||[];
+            let fw=0,gir=0,putts=0;
+            for(let i=0;i<n;i++){
+              if(pars[i]!==3 && !validBinaryStat(r.fairways?.[i]))fw++;
+              if(!validBinaryStat(r.gir?.[i]))gir++;
+              if(!validCountStat(r.putts?.[i]))putts++;
+            }
+            const puttingKnown=new Set(db.puttingDetails.filter(p=>p.date===r.date && normalizeCourseName(p.course)===normalizeCourseName(c?.name) && Number.isFinite(Number(p.distance))).map(p=>Number(p.hole)));
+            const firstPutts=Math.max(0,n-puttingKnown.size);
+            return {fw,gir,putts,firstPutts};
+          }"""
+          s2, count = re.subn(pattern,replacement,s,count=1,flags=re.S)
+          assert count == 1
+          s = s2
+
+          old_gir = "gir:{label:'Greens in regulation',short:'GIR',domain:[0,100],value:r=>100*sum(r.gir)/(r.gir?.length||1),better:'high',fmt:v=>Math.round(v)+'%'},"
+          new_gir = "gir:{label:'Greens in regulation',short:'GIR',domain:[0,100],value:r=>{const a=(r.gir||[]).filter(validBinaryStat);return a.length?100*sum(a)/a.length:null},better:'high',fmt:v=>Math.round(v)+'%'},"
+          old_fw = "fairways:{label:'Fairways hit',short:'Fairways',domain:[0,100],value:r=>{const a=(r.fairways||[]).filter(x=>x!=null);return a.length?100*sum(a)/a.length:null},better:'high',fmt:v=>Math.round(v)+'%'},"
+          new_fw = "fairways:{label:'Fairways hit',short:'Fairways',domain:[0,100],value:r=>{const a=(r.fairways||[]).filter(validBinaryStat);return a.length?100*sum(a)/a.length:null},better:'high',fmt:v=>Math.round(v)+'%'},"
+          assert old_gir in s
+          assert old_fw in s
+          s = s.replace(old_gir,new_gir,1).replace(old_fw,new_fw,1)
+          p.write_text(s)
+          PY
+      - name: Verify
+        run: grep -q 'GolfRecon v12.4 Beta' index.html && grep -q 'function validBinaryStat' index.html && grep -q 'filter(validBinaryStat)' index.html
+      - name: Commit
+        run: git config user.name github-actions-bot && git config user.email actions@github.com && git add index.html && git commit -m 'Fix FIR GIR completeness detection for v12.4' && git push
