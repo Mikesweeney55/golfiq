@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>GolfRecon v12.6 Beta</title>
+  <title>GolfRecon v12.7 Beta</title>
   <style>
 :root{
   --bg:#0d1412;
@@ -418,7 +418,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);width:min(620
     <header class="topbar">
       <div class="topbar-left">
         <div class="gr-brand" aria-label="GolfRecon"><div class="gr-mark"><span class="gr-cross">GR</span><span class="gr-flag">⚑</span></div><div class="gr-word"><strong>GOLFRECON</strong><small>KNOW YOUR GAME. PLAY SMARTER.</small></div></div>
-        <div class="brand-meta"><span>v12.6 Beta</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
+        <div class="brand-meta"><span>v12.7 Beta</span><span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Syncing</span></span></div>
       </div>
 
       <div class="giq-logo" aria-label="GR">
@@ -1781,6 +1781,15 @@ async function compressImage(file,maxDim=1600,quality=.78){
 }
 function val(v){return v===null||v===undefined||v===''?'—':v}
 function boolMark(v){return v===true||v===1?'✓':v===false||v===0?'✕':'—'}
+function directionalReviewHtml(r){
+  const pct=v=>v===null||v===undefined||v===''?'—':`${Number(v).toFixed(Number(v)%1?1:0)}%`;
+  const fd=r?.fairway_distribution, gd=r?.gir_distribution;
+  if(!fd && !gd)return '';
+  const row=(label,v)=>`<div class="import-kpi"><div class="k">${label}</div><div class="v">${pct(v)}</div></div>`;
+  return `<div class="section-head" style="margin-top:16px"><div><div class="eyebrow">DIRECTIONAL DATA</div><h3>Miss patterns found</h3></div></div>
+    ${fd?`<div class="backfill-note" style="margin-bottom:8px"><strong>Fairways</strong></div><div class="import-summary">${row('Hit',fd.hit_pct)}${row('Left',fd.left_pct)}${row('Right',fd.right_pct)}${row('Short',fd.short_pct)}${row('Long',fd.long_pct)}</div>`:''}
+    ${gd?`<div class="backfill-note" style="margin:12px 0 8px"><strong>GIR</strong></div><div class="import-summary">${row('Hit',gd.hit_pct)}${row('Short',gd.short_pct)}${row('Left',gd.left_pct)}${row('Right',gd.right_pct)}${row('Long',gd.long_pct)}${row('Other',gd.other_pct)}</div>`:''}`;
+}
 function reviewHtml(x){
   const r=x.round||x;
   const holes=r.holes_detail||r.hole_details||[];
@@ -1796,6 +1805,7 @@ function reviewHtml(x){
       <div class="import-kpi"><div class="k">Fairways</div><div class="v">${val(r.fairways_hit)}</div></div>
       <div class="import-kpi"><div class="k">GIR</div><div class="v">${val(r.gir)}</div></div>
     </div>
+    ${directionalReviewHtml(r)}
     ${holes.length?`<div style="overflow-x:auto"><table class="import-hole-table"><thead><tr><th>Hole</th><th>Score</th><th>FH</th><th>GIR</th><th>Putts</th><th>1st putt</th></tr></thead><tbody>${holes.map(h=>`<tr><td>${val(h.hole)}</td><td>${val(h.score)}</td><td>${boolMark(h.fairway_hit)}</td><td>${boolMark(h.gir)}</td><td>${val(h.putts)}</td><td>${h.first_putt_distance_ft!=null?val(h.first_putt_distance_ft)+'′':'—'}</td></tr>`).join('')}</tbody></table></div>`:''}
     <div class="import-confidence">Extraction confidence: ${Math.round(100*(x.confidence??r.confidence??0))}%</div>`;
 }
