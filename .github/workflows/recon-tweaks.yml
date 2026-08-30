@@ -10,12 +10,61 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch index
-        env:
-          OLD_BLOCK: ZnVuY3Rpb24gc2V0R2xvYmFsQ291cnNlKGlkKXsKICBpZighZGIuY291cnNlcy5zb21lKGM9PmMuaWQ9PT1pZCkpcmV0dXJuOwogIHN0YXRlLnNlbGVjdGVkQ291cnNlSWQ9aWQ7CiAgc3RhdGUuZ2FtZUNvdXJzZUlkPWlkOwogIHN0YXRlLnJvdW5kQ291cnNlSWQ9aWQ7CiAgc3RhdGUuc2VsZWN0ZWRSb3VuZElkPW51bGw7CiAgdHJ5e2xvY2FsU3RvcmFnZS5zZXRJdGVtKCdnb2xmcmVjb25TZWxlY3RlZENvdXJzZUlkJyxpZCl9Y2F0Y2h7fQogIHJlZnJlc2hHbG9iYWxDb3Vyc2VTZWxlY3RvcigpOwogIHJlbmRlcigpOwp9
-          NEW_BLOCK: YXN5bmMgZnVuY3Rpb24gc2V0R2xvYmFsQ291cnNlKGlkKXsKICBpZighZGIuY291cnNlcy5zb21lKGM9PmMuaWQ9PT1pZCkpcmV0dXJuOwogIHN0YXRlLnNlbGVjdGVkQ291cnNlSWQ9aWQ7CiAgc3RhdGUuZ2FtZUNvdXJzZUlkPWlkOwogIHN0YXRlLnJvdW5kQ291cnNlSWQ9aWQ7CiAgc3RhdGUuc2VsZWN0ZWRSb3VuZElkPW51bGw7CiAgdHJ5e2xvY2FsU3RvcmFnZS5zZXRJdGVtKCdnb2xmcmVjb25TZWxlY3RlZENvdXJzZUlkJyxpZCl9Y2F0Y2h7fQogIHJlZnJlc2hHbG9iYWxDb3Vyc2VTZWxlY3RvcigpOwogIHJlbmRlcigpOwoKICB0cnl7CiAgICBjb25zdCBkYXRhPWF3YWl0IGNhbGxJbXBvcnRGdW5jdGlvbih7YWN0aW9uOidib290c3RyYXAnfSk7CiAgICBkYi5wbGF5ZXI9ZGF0YS5wbGF5ZXJ8fGRiLnBsYXllcjsKICAgIGRiLnN3aW5nVGhvdWdodHM9ZGF0YS5zd2luZ1Rob3VnaHRzfHxkYi5zd2luZ1Rob3VnaHRzOwogICAgZGIuY291cnNlcz1kYXRhLmNvdXJzZXN8fGRiLmNvdXJzZXM7CiAgICBkYi5yb3VuZHM9ZGF0YS5yb3VuZHN8fGRiLnJvdW5kczsKICAgIGRiLnB1dHRpbmdEZXRhaWxzPWRhdGEucHV0dGluZ0RldGFpbHN8fGRiLnB1dHRpbmdEZXRhaWxzOwogICAgZGIuY2x1YlN0YXRzPWRhdGEuY2x1YlN0YXRzfHxkYi5jbHViU3RhdHM7CiAgICBpZighZGIuY291cnNlcy5zb21lKGM9PmMuaWQ9PT1pZCkpIHN0YXRlLnNlbGVjdGVkQ291cnNlSWQ9ZGIuY291cnNlc1swXT8uaWR8fG51bGw7CiAgICBpZihzdGF0ZS5nYW1lQ291cnNlSWQhPT0nYWxsJykgc3RhdGUuZ2FtZUNvdXJzZUlkPXN0YXRlLnNlbGVjdGVkQ291cnNlSWQ7CiAgICBpZihzdGF0ZS5yb3VuZENvdXJzZUlkIT09J2FsbCcpIHN0YXRlLnJvdW5kQ291cnNlSWQ9c3RhdGUuc2VsZWN0ZWRDb3Vyc2VJZDsKICAgIHJlZnJlc2hHbG9iYWxDb3Vyc2VTZWxlY3RvcigpOwogICAgcmVuZGVyKCk7CiAgfWNhdGNoKGUpewogICAgY29uc29sZS53YXJuKCdDb3Vyc2UgcmVmcmVzaCBmYWlsZWQ7IHVzaW5nIGN1cnJlbnQgc3luY2VkIGRhdGEnLGUpOwogIH0KfQ==
-        run: python -c "import os,base64,pathlib; p=pathlib.Path('index.html'); s=p.read_text(); old=base64.b64decode(os.environ['OLD_BLOCK']).decode(); new=base64.b64decode(os.environ['NEW_BLOCK']).decode(); assert old in s; assert '<title>GolfRecon v12.0 Beta</title>' in s; s=s.replace(old,new,1).replace('<title>GolfRecon v12.0 Beta</title>','<title>GolfRecon v12.1 Beta</title>',1); p.write_text(s)"
+      - name: Patch v12.2 UI cleanup
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+
+          replacements=[
+            ('<title>GolfRecon v12.1 Beta</title>','<title>GolfRecon v12.2 Beta</title>'),
+            ('<div class="brand-meta"><span>v12.0 Beta</span>','<div class="brand-meta"><span>v12.2 Beta</span>'),
+            ('<div class="muted" style="font-size:11px;margin-top:8px">Scorecard symbols: circle birdie · square bogey · double outline double bogey · no outline par</div>',''),
+            ('<div class="card"><div class="eyebrow">PUTTING BY DISTANCE</div><h3 style="margin-top:4px">Outcome mix</h3>','<div class="card"><div class="eyebrow">PUTTING BY DISTANCE</div><h3 style="margin-top:4px">Results</h3>'),
+            ('<div class="card" style="margin-top:12px"><div class="eyebrow">PRACTICE PLAN</div><h3 style="margin-top:4px">Where to spend your putting time</h3>','<div class="card" style="margin-top:12px"><div class="eyebrow">PRACTICE PLAN</div><h3 style="margin-top:4px">Focus</h3>'),
+            ('<div class="putt-stack-count">${z.n} greens</div>','<div class="putt-stack-count">${z.n}</div>'),
+            ('<h2>Groups & Leagues</h2>','<h2>Platoons & Leagues</h2>'),
+            ('home for recurring groups, league seasons, events, standings, previews, recaps and shareable trash talk.','home for platoons, leagues, events, standings, previews and recaps.')
+          ]
+          for old,new in replacements:
+            if old not in s:
+              raise SystemExit('Expected text not found: '+old[:100])
+            s=s.replace(old,new,1)
+
+          old='''    ${gameKeysPregameHtml()}
+
+    ${pregameTendencies(c)}
+
+    <div class="section-head"><div><div class="eyebrow">3 INSIGHTS · LAST ${Math.min(3,rounds.length)||0} HERE</div><h2>What matters tomorrow</h2></div></div>
+    <div class="card key-list">${keys.map((k,i)=>`<div class="key"><div class="key-num">${i+1}</div><div><strong>${k.title}</strong><span class="muted">${k.text}</span></div></div>`).join('')}</div>
+
+    ${pregameChatHtml(c)}'''
+          new='''    <div class="section-head"><div><div class="eyebrow">3 INSIGHTS · LAST ${Math.min(3,rounds.length)||0} HERE</div><h2>What matters tomorrow</h2></div></div>
+    <div class="card key-list">${keys.map((k,i)=>`<div class="key"><div class="key-num">${i+1}</div><div><strong>${k.title}</strong><span class="muted">${k.text}</span></div></div>`).join('')}</div>
+
+    ${gameKeysPregameHtml()}
+
+    ${pregameTendencies(c)}
+
+    ${pregameChatHtml(c)}'''
+          if old not in s:
+            raise SystemExit('Pregame ordering block not found')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
       - name: Verify
-        run: grep -q 'async function setGlobalCourse(id)' index.html && grep -q 'GolfRecon v12.1 Beta' index.html && git diff --check
+        run: |
+          grep -q 'GolfRecon v12.2 Beta' index.html
+          grep -q '<span>v12.2 Beta</span>' index.html
+          grep -q '<h2>What matters tomorrow</h2>' index.html
+          grep -q '<h2>Platoons & Leagues</h2>' index.html
+          git diff --check
       - name: Commit
-        run: git config user.name github-actions-bot && git config user.email actions@github.com && git add index.html && git commit -m 'Fix Pregame refresh and bump v12.1' && git push
+        run: |
+          git config user.name github-actions-bot
+          git config user.email actions@github.com
+          git add index.html
+          git commit -m 'Polish Pregame and putting UI for v12.2'
+          git push
