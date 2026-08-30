@@ -14,30 +14,20 @@ jobs:
         run: |
           python <<'PY'
           from pathlib import Path
+          import base64
           p=Path('index.html')
           s=p.read_text()
           assert '<title>GolfRecon v12.6 Beta</title>' in s
           assert '<span>v12.6 Beta</span>' in s
           s=s.replace('<title>GolfRecon v12.6 Beta</title>','<title>GolfRecon v12.7 Beta</title>',1)
           s=s.replace('<span>v12.6 Beta</span>','<span>v12.7 Beta</span>',1)
-
           marker='function reviewHtml(x){'
-          helper=r'''function directionalReviewHtml(r){
-  const pct=v=>v===null||v===undefined||v===''?'—':`${Number(v).toFixed(Number(v)%1?1:0)}%`;
-  const fd=r?.fairway_distribution, gd=r?.gir_distribution;
-  if(!fd && !gd)return '';
-  const row=(label,v)=>`<div class="import-kpi"><div class="k">${label}</div><div class="v">${pct(v)}</div></div>`;
-  return `<div class="section-head" style="margin-top:16px"><div><div class="eyebrow">DIRECTIONAL DATA</div><h3>Miss patterns found</h3></div></div>
-    ${fd?`<div class="backfill-note" style="margin-bottom:8px"><strong>Fairways</strong></div><div class="import-summary">${row('Hit',fd.hit_pct)}${row('Left',fd.left_pct)}${row('Right',fd.right_pct)}${row('Short',fd.short_pct)}${row('Long',fd.long_pct)}</div>`:''}
-    ${gd?`<div class="backfill-note" style="margin:12px 0 8px"><strong>GIR</strong></div><div class="import-summary">${row('Hit',gd.hit_pct)}${row('Short',gd.short_pct)}${row('Left',gd.left_pct)}${row('Right',gd.right_pct)}${row('Long',gd.long_pct)}${row('Other',gd.other_pct)}</div>`:''}`;
-}
-'''
+          helper=base64.b64decode('ZnVuY3Rpb24gZGlyZWN0aW9uYWxSZXZpZXdIdG1sKHIpewogIGNvbnN0IHBjdD12PT52PT09bnVsbHx8dj09PXVuZGVmaW5lZHx8dj09PScnPyfigJQnOmAke051bWJlcih2KS50b0ZpeGVkKE51bWJlcih2KSUxPzE6MCl9JWA7CiAgY29uc3QgZmQ9cj8uZmFpcndheV9kaXN0cmlidXRpb24sIGdkPXI/Lmdpcl9kaXN0cmlidXRpb247CiAgaWYoIWZkICYmICFnZClyZXR1cm4gJyc7CiAgY29uc3Qgcm93PShsYWJlbCx2KT0+YDxkaXYgY2xhc3M9ImltcG9ydC1rcGkiPjxkaXYgY2xhc3M9ImsiPiR7bGFiZWx9PC9kaXY+PGRpdiBjbGFzcz0idiI+JHtwY3Qodil9PC9kaXY+PC9kaXY+YDsKICByZXR1cm4gYDxkaXYgY2xhc3M9InNlY3Rpb24taGVhZCIgc3R5bGU9Im1hcmdpbi10b3A6MTZweCI+PGRpdj48ZGl2IGNsYXNzPSJleWVicm93Ij5ESVJFQ1RJT05BTCBEQVRBPC9kaXY+PGgzPk1pc3MgcGF0dGVybnMgZm91bmQ8L2gzPjwvZGl2PjwvZGl2PgogICAgJHtmZD9gPGRpdiBjbGFzcz0iYmFja2ZpbGwtbm90ZSIgc3R5bGU9Im1hcmdpbi1ib3R0b206OHB4Ij48c3Ryb25nPkZhaXJ3YXlzPC9zdHJvbmc+PC9kaXY+PGRpdiBjbGFzcz0iaW1wb3J0LXN1bW1hcnkiPiR7cm93KCdIaXQnLGZkLmhpdF9wY3QpfSR7cm93KCdMZWZ0JyxmZC5sZWZ0X3BjdCl9JHtyb3coJ1JpZ2h0JyxmZC5yaWdodF9wY3QpfSR7cm93KCdTaG9ydCcsZmQuc2hvcnRfcGN0KX0ke3JvdygnTG9uZycsZmQubG9uZ19wY3QpfTwvZGl2PmA6Jyd9CiAgICAke2dkP2A8ZGl2IGNsYXNzPSJiYWNrZmlsbC1ub3RlIiBzdHlsZT0ibWFyZ2luOjEycHggMCA4cHgiPjxzdHJvbmc+R0lSPC9zdHJvbmc+PC9kaXY+PGRpdiBjbGFzcz0iaW1wb3J0LXN1bW1hcnkiPiR7cm93KCdIaXQnLGdkLmhpdF9wY3QpfSR7cm93KCdTaG9ydCcsZ2Quc2hvcnRfcGN0KX0ke3JvdygnTGVmdCcsZ2QubGVmdF9wY3QpfSR7cm93KCdSaWdodCcsZ2QucmlnaHRfcGN0KX0ke3JvdygnTG9uZycsZ2QubG9uZ19wY3QpfSR7cm93KCdPdGhlcicsZ2Qub3RoZXJfcGN0KX08L2Rpdj5gOicnfWA7Cn0K').decode()
           assert marker in s
           s=s.replace(marker,helper+marker,1)
-
-          needle="    ${holes.length?`<div style=\"overflow-x:auto\"><table class=\"import-hole-table\">"
+          needle='    ${holes.length?`<div style="overflow-x:auto"><table class="import-hole-table">'
           assert needle in s
-          s=s.replace(needle,"    ${directionalReviewHtml(r)}\n"+needle,1)
+          s=s.replace(needle,'    ${directionalReviewHtml(r)}\n'+needle,1)
           p.write_text(s)
           PY
       - name: Verify
